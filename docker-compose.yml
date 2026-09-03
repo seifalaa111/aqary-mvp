@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aqary-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aqary
+      POSTGRES_PASSWORD: aqary
+      POSTGRES_DB: aqary
+    ports:
+      - "55432:5432"
+    volumes:
+      - aqary-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aqary -d aqary"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  aqary-pgdata:

@@ -1,0 +1,13 @@
+# Vercel reads this INSTEAD of .gitignore. That matters: .gitignore excludes
+# ./storage and ./public/property because they are generated, but the deployment
+# needs both — the seeded documents and the property photography are the demo.
+node_modules
+.next
+.env
+.env.local
+.git
+test-results
+playwright-report
+coverage
+*.tsbuildinfo
+tests/e2e

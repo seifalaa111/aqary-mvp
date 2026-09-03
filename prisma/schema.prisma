@@ -1,0 +1,1300 @@
+// Aqary — Egypt's secondary marketplace for real-estate installment contracts.
+//
+// Design notes that matter:
+//  * All money is `Decimal` (never Float). Currency is EGP everywhere.
+//  * Material contract values live in `ContractField`, which keeps FIVE parallel
+//    sources (declared / extracted / receipt-derived / developer-stated / verified).
+//    Nothing ever overwrites another source. Only an analyst writes `verified*`.
+//  * `Listing` carries the buyer-facing read model (asking cash, remaining, etc.),
+//    projected at verification time from promoted verified values so the
+//    marketplace can filter and sort against real indexes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SELLER
+  BUYER
+  ANALYST
+  ADMIN
+  DEVELOPER_PARTNER
+}
+
+enum KycStatus {
+  NOT_STARTED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum BuyerTier {
+  BROWSER
+  VERIFIED
+  PRIORITY
+}
+
+enum RelationshipToContract {
+  OWNER
+  AUTHORIZED_REPRESENTATIVE
+  HEIR
+}
+
+enum UnitType {
+  APARTMENT
+  DUPLEX
+  PENTHOUSE
+  STUDIO
+  TOWNHOUSE
+  TWIN_HOUSE
+  STANDALONE_VILLA
+  CHALET
+  OFFICE
+  CLINIC
+  RETAIL
+  LAND
+}
+
+enum FinishingStatus {
+  CORE_AND_SHELL
+  SEMI_FINISHED
+  FULLY_FINISHED
+  FINISHED_WITH_AC
+  FURNISHED
+}
+
+enum DeliveryStatus {
+  NOT_DELIVERED
+  DELIVERED
+  DELAYED
+}
+
+enum PaymentFrequency {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUAL
+  ANNUAL
+}
+
+enum AssignmentPermission {
+  ALLOWED
+  NOT_ALLOWED
+  CONDITIONAL
+  UNKNOWN
+}
+
+enum FeeType {
+  NONE
+  PERCENT
+  FIXED
+}
+
+/// Every material contract value tracked with full provenance.
+enum ContractFieldKey {
+  TOTAL_PRICE
+  DOWN_PAYMENT
+  AMOUNT_PAID
+  OUTSTANDING_BALANCE
+  INSTALLMENT_AMOUNT
+  INSTALLMENT_FREQUENCY
+  NUMBER_OF_INSTALLMENTS
+  MAINTENANCE_DEPOSIT
+  CLUB_FEE
+  ASSIGNMENT_FEE
+  CANCELLATION_PENALTY_PCT
+  CONTRACT_SIGNING_DATE
+  PLAN_START_DATE
+  NEXT_DUE_DATE
+  DELIVERY_DATE
+}
+
+enum ValueKind {
+  MONEY
+  DATE
+  COUNT
+  PERCENT
+  ENUM
+  TEXT
+}
+
+/// The provenance tag rendered on every buyer-facing figure.
+enum ValueSource {
+  SELLER_DECLARED
+  AI_EXTRACTED
+  RECEIPT_VERIFIED
+  DEVELOPER_CONFIRMED
+  ANALYST_OVERRIDE
+}
+
+enum DocumentType {
+  SALE_CONTRACT
+  CONTRACT_ANNEX
+  PAYMENT_SCHEDULE_ANNEX
+  RESERVATION_FORM
+  PAYMENT_RECEIPT
+  BANK_TRANSFER_STATEMENT
+  CHEQUE_COPY
+  DEVELOPER_ACCOUNT_STATEMENT
+  DELIVERY_CERTIFICATE
+  NATIONAL_ID_FRONT
+  NATIONAL_ID_BACK
+  PASSPORT
+  POWER_OF_ATTORNEY
+  CO_OWNER_CONSENT
+  DEVELOPER_NOC
+  MAINTENANCE_RECEIPT
+  PROOF_OF_FUNDS
+  OTHER
+}
+
+enum DocumentStatus {
+  UPLOADED
+  SCANNING
+  PROCESSING
+  PROCESSED
+  FAILED
+  REJECTED
+}
+
+enum MediaKind {
+  /// A photograph of THIS unit, taken after handover.
+  PHOTO
+  /// A photograph of the developer's show unit or a comparable finished unit.
+  /// Honest middle ground for off-plan stock: a real photograph, but not of
+  /// this unit. Labelled as such everywhere it is shown.
+  SHOW_UNIT
+  /// A computer-generated image supplied by the developer.
+  RENDER
+  FLOOR_PLAN
+  MASTER_PLAN
+  PROGRESS
+}
+
+enum RoomTag {
+  EXTERIOR
+  ENTRANCE
+  LIVING
+  BEDROOM
+  KITCHEN
+  BATHROOM
+  BALCONY
+  GARDEN
+  VIEW
+  COMPOUND
+  AMENITY
+  PLAN
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  FLAGGED
+  REJECTED
+}
+
+enum Severity {
+  INFO
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum DiscrepancyStatus {
+  OPEN
+  RESOLVED
+  WAIVED
+}
+
+enum FraudSignalType {
+  DUPLICATE_RECEIPT_EXACT
+  DUPLICATE_RECEIPT_PERCEPTUAL
+  IMAGE_MANIPULATION
+  EXIF_ANOMALY
+  DATE_SEQUENCE_ANOMALY
+  ARITHMETIC_IMPOSSIBILITY
+  DOCUMENT_REUSED_ACROSS_LISTINGS
+  ID_NAME_MISMATCH
+  RECEIPT_TOTAL_MISMATCH
+}
+
+enum FraudSignalStatus {
+  OPEN
+  DISMISSED
+  CONFIRMED
+  ESCALATED
+}
+
+enum ListingStatus {
+  DRAFT
+  SUBMITTED
+  AI_PROCESSING
+  PENDING_REVIEW
+  INFO_REQUESTED
+  VERIFIED
+  LISTED
+  UNDER_OFFER
+  RESERVED
+  ASSIGNMENT_IN_PROGRESS
+  COMPLETED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum Urgency {
+  IMMEDIATE
+  ONE_TO_THREE_MONTHS
+  FLEXIBLE
+}
+
+enum ExitReason {
+  JOB_CHANGE
+  BUSINESS_DIFFICULTY
+  INCREASED_OBLIGATIONS
+  FAMILY_CIRCUMSTANCES
+  LIQUIDITY_NEED
+  STRATEGY_CHANGE
+  CANNOT_CONTINUE_INSTALLMENTS
+  OTHER
+}
+
+enum InstallmentKind {
+  DOWN_PAYMENT
+  REGULAR
+  BALLOON
+  DELIVERY
+  MAINTENANCE
+  CLUB
+}
+
+enum InstallmentStatus {
+  PAID
+  DUE
+  UPCOMING
+  OVERDUE
+}
+
+enum ScheduleSource {
+  SELLER_DECLARED
+  AI_REBUILT
+  RECEIPT_RECONCILED
+  ANALYST_VERIFIED
+}
+
+enum ReceiptStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  DUPLICATE
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  CARD
+  UNKNOWN
+}
+
+enum OfferDirection {
+  BUYER_TO_SELLER
+  SELLER_TO_BUYER
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  COUNTERED
+  EXPIRED
+  WITHDRAWN
+}
+
+enum DealStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum MilestoneKey {
+  OFFER_ACCEPTED
+  RESERVATION_DEPOSIT
+  DEVELOPER_NOC_REQUESTED
+  ASSIGNMENT_APPOINTMENT
+  DOCUMENTS_SIGNED
+  ASSIGNMENT_REGISTERED
+  CASH_RELEASED_TO_SELLER
+  PLATFORM_FEE_COLLECTED
+  COMPLETED
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  BLOCKED
+  AT_RISK
+  COMPLETED
+}
+
+enum PaymentKind {
+  RESERVATION_DEPOSIT
+  PLATFORM_FEE
+  DEVELOPER_ASSIGNMENT_FEE
+  SELLER_RELEASE
+}
+
+enum PaymentStatus {
+  INITIATED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum NotificationType {
+  LISTING_SUBMITTED
+  LISTING_INFO_REQUESTED
+  LISTING_VERIFIED
+  LISTING_PUBLISHED
+  LISTING_REJECTED
+  NEW_MATCH
+  SAVED_SEARCH_HIT
+  OFFER_RECEIVED
+  OFFER_COUNTERED
+  OFFER_ACCEPTED
+  OFFER_DECLINED
+  OFFER_EXPIRED
+  DEAL_CREATED
+  MILESTONE_ADVANCED
+  PAYMENT_SUCCEEDED
+  PAYMENT_FAILED
+  DEAL_COMPLETED
+  MESSAGE_RECEIVED
+  EXTRACTION_READY
+}
+
+enum ConsentType {
+  DEVELOPER_VERIFICATION_AUTHORIZATION
+  LISTING_AGREEMENT
+  TERMS_OF_SERVICE
+  PRIVACY_AND_DATA_PROCESSING
+  DISPLAY_REDACTED_CONTRACT
+  BUYER_CONFIDENTIALITY
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  DEAD
+}
+
+enum ValuationConfidence {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ProviderMode {
+  MOCK
+  LIVE
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  phone         String    @unique
+  passwordHash  String?
+  fullNameEn    String
+  fullNameAr    String?
+  nationalId    String?
+  dateOfBirth   DateTime?
+  governorate   String?
+  roles         Role[]    @default([])
+  kycStatus     KycStatus @default(NOT_STARTED)
+  phoneVerified Boolean   @default(false)
+  emailVerified Boolean   @default(false)
+  locale        String    @default("en")
+  avatarColor   String    @default("#1F4B43")
+  isDemo        Boolean   @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sellerProfile      SellerProfile?
+  buyerProfile       BuyerProfile?
+  sessions           Session[]
+  listings           Listing[]           @relation("SellerListings")
+  assignedListings   Listing[]           @relation("AnalystListings")
+  documents          Document[]
+  buyerOffers        Offer[]             @relation("BuyerOffers")
+  sellerOffers       Offer[]             @relation("SellerOffers")
+  buyerDeals         Deal[]              @relation("BuyerDeals")
+  sellerDeals        Deal[]              @relation("SellerDeals")
+  coordinatedDeals   Deal[]              @relation("CoordinatorDeals")
+  notifications      Notification[]
+  messages           Message[]
+  consents           Consent[]
+  savedSearches      SavedSearch[]
+  savedListings      SavedListing[]
+  matches            Match[]
+  auditEvents        AuditEvent[]
+  documentAccessLogs DocumentAccessLog[]
+
+  @@index([kycStatus])
+  @@index([createdAt])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  userId     String
+  activeRole Role
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model OtpCode {
+  id        String    @id @default(cuid())
+  phone     String
+  code      String
+  purpose   String    @default("LOGIN")
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([phone, purpose])
+}
+
+model SellerProfile {
+  id                     String                 @id @default(cuid())
+  userId                 String                 @unique
+  relationshipToContract RelationshipToContract @default(OWNER)
+  coOwnerCount           Int                    @default(0)
+  coOwnerNames           String[]               @default([])
+  preferredContactWindow String?
+  whatsappOptIn          Boolean                @default(false)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  user                   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BuyerProfile {
+  id                     String            @id @default(cuid())
+  userId                 String            @unique
+  tier                   BuyerTier         @default(BROWSER)
+  availableCash          Decimal?          @db.Decimal(18, 2)
+  maxInstallment         Decimal?          @db.Decimal(18, 2)
+  installmentFrequency   PaymentFrequency  @default(QUARTERLY)
+  incomeRange            String?
+  employmentType         String?
+  purchasePurpose        String?
+  readiness              String?
+  prefCities             String[]          @default([])
+  prefDeveloperIds       String[]          @default([])
+  prefProjectIds         String[]          @default([])
+  prefUnitTypes          UnitType[]        @default([])
+  prefBedroomsMin        Int?
+  prefBuaMin             Int?
+  prefDeliveryByYear     Int?
+  prefFinishing          FinishingStatus[] @default([])
+  freeTextPriorities     String?
+  proofOfFundsDocumentId String?
+  proofOfFundsVerifiedAt DateTime?
+  proofOfFundsVerifiedBy String?
+  onboardingCompletedAt  DateTime?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tier])
+}
+
+// ---------------------------------------------------------------------------
+// Supply-side reference data
+// ---------------------------------------------------------------------------
+
+model Developer {
+  id            String                     @id @default(cuid())
+  slug          String                     @unique
+  nameEn        String
+  nameAr        String
+  descriptionEn String?
+  descriptionAr String?
+  isDemo        Boolean                    @default(true)
+  createdAt     DateTime                   @default(now())
+  projects      Project[]
+  policy        DeveloperAssignmentPolicy?
+}
+
+model DeveloperAssignmentPolicy {
+  id                String               @id @default(cuid())
+  developerId       String               @unique
+  assignmentAllowed AssignmentPermission @default(CONDITIONAL)
+  feeType           FeeType              @default(PERCENT)
+  feePercentBps     Int?
+  feeFixedAmount    Decimal?             @db.Decimal(18, 2)
+  feeBasis          String               @default("TOTAL_CONTRACT_PRICE")
+  minPercentPaidBps Int?
+  minMonthsElapsed  Int?
+  requiredDocuments String[]             @default([])
+  typicalNocDays    Int?
+  waitingPeriodDays Int?
+  conditionsEn      String?
+  conditionsAr      String?
+  contactName       String?
+  contactEmail      String?
+  contactPhone      String?
+  isSynthetic       Boolean              @default(true)
+  updatedAt         DateTime             @updatedAt
+  developer         Developer            @relation(fields: [developerId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id              String                  @id @default(cuid())
+  developerId     String
+  slug            String                  @unique
+  nameEn          String
+  nameAr          String
+  city            String
+  area            String
+  lat             Float?
+  lng             Float?
+  descriptionEn   String?
+  descriptionAr   String?
+  masterPlanKey   String?
+  isDemo          Boolean                 @default(true)
+  createdAt       DateTime                @default(now())
+  developer       Developer               @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  units           Unit[]
+  priceBenchmarks ProjectPriceBenchmark[]
+
+  @@index([city])
+  @@index([developerId])
+}
+
+/// Seeded, explicitly synthetic developer price-per-sqm history used by ValuationService.
+model ProjectPriceBenchmark {
+  id          String   @id @default(cuid())
+  projectId   String
+  unitType    UnitType
+  year        Int
+  quarter     Int
+  pricePerSqm Decimal  @db.Decimal(18, 2)
+  isSynthetic Boolean  @default(true)
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, unitType, year, quarter])
+}
+
+model Unit {
+  id                      String          @id @default(cuid())
+  projectId               String
+  unitCode                String
+  phase                   String?
+  unitType                UnitType
+  buaSqm                  Decimal         @db.Decimal(10, 2)
+  gardenSqm               Decimal?        @db.Decimal(10, 2)
+  roofSqm                 Decimal?        @db.Decimal(10, 2)
+  terraceSqm              Decimal?        @db.Decimal(10, 2)
+  floor                   Int?
+  bedrooms                Int
+  bathrooms               Int
+  view                    String?
+  finishing               FinishingStatus @default(SEMI_FINISHED)
+  contractualDeliveryDate DateTime
+  deliveryStatus          DeliveryStatus  @default(NOT_DELIVERED)
+  /// Seeded, synthetic "what the developer charges for a comparable unit today".
+  currentDeveloperPrice   Decimal?        @db.Decimal(18, 2)
+  createdAt               DateTime        @default(now())
+  project                 Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contracts               Contract[]
+
+  @@unique([projectId, unitCode])
+  @@index([unitType])
+}
+
+// ---------------------------------------------------------------------------
+// Contract + provenance
+// ---------------------------------------------------------------------------
+
+model Contract {
+  id                       String               @id @default(cuid())
+  unitId                   String
+  sellerId                 String
+  contractNumber           String?
+  assignmentPermitted      AssignmentPermission @default(UNKNOWN)
+  assignmentConditionsNote String?
+  cancellationPenaltyNote  String?
+  hasArrears               Boolean              @default(false)
+  arrearsAmount            Decimal?             @db.Decimal(18, 2)
+  hasBankFinance           Boolean              @default(false)
+  lienNote                 String?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+
+  unit         Unit            @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  fields       ContractField[]
+  installments Installment[]
+  receipts     Receipt[]
+  listing      Listing?
+
+  @@index([sellerId])
+}
+
+/// The §2.2 multi-source value record. Five independent sources coexist forever.
+/// Only an analyst action may write the `verified*` columns.
+model ContractField {
+  id         String           @id @default(cuid())
+  contractId String
+  key        ContractFieldKey
+  kind       ValueKind
+
+  // 1. what the seller typed
+  declaredNum  Decimal?  @db.Decimal(18, 2)
+  declaredDate DateTime?
+  declaredText String?
+
+  // 2. what the AI read out of a document
+  extractedNum        Decimal?  @db.Decimal(18, 2)
+  extractedDate       DateTime?
+  extractedText       String?
+  extractedConfidence Float?
+  extractedDocumentId String?
+  extractedPage       Int?
+  extractedBbox       Json?
+  extractionId        String?
+
+  // 3. what the verified receipts / rebuilt schedule imply
+  receiptDerivedNum  Decimal?  @db.Decimal(18, 2)
+  receiptDerivedDate DateTime?
+  receiptDerivedNote String?
+
+  // 4. what the developer statement says
+  developerStatedNum        Decimal?  @db.Decimal(18, 2)
+  developerStatedDate       DateTime?
+  developerStatedText       String?
+  developerStatedDocumentId String?
+
+  // 5. the adopted truth — analyst only
+  verifiedNum    Decimal?     @db.Decimal(18, 2)
+  verifiedDate   DateTime?
+  verifiedText   String?
+  verifiedSource ValueSource?
+  verifiedBy     String?
+  verifiedAt     DateTime?
+  overrideReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, key])
+  @@index([contractId])
+}
+
+model Installment {
+  id             String            @id @default(cuid())
+  contractId     String
+  sequence       Int
+  kind           InstallmentKind   @default(REGULAR)
+  dueDate        DateTime
+  amount         Decimal           @db.Decimal(18, 2)
+  status         InstallmentStatus @default(UPCOMING)
+  paidAmount     Decimal?          @db.Decimal(18, 2)
+  paidDate       DateTime?
+  receiptId      String?
+  runningBalance Decimal           @db.Decimal(18, 2)
+  source         ScheduleSource    @default(SELLER_DECLARED)
+  label          String?
+  contract       Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, source, sequence])
+  @@index([contractId, dueDate])
+}
+
+model Receipt {
+  id              String        @id @default(cuid())
+  contractId      String
+  documentId      String?
+  declaredAmount  Decimal?      @db.Decimal(18, 2)
+  extractedAmount Decimal?      @db.Decimal(18, 2)
+  verifiedAmount  Decimal?      @db.Decimal(18, 2)
+  declaredDate    DateTime?
+  extractedDate   DateTime?
+  verifiedDate    DateTime?
+  method          PaymentMethod @default(UNKNOWN)
+  reference       String?
+  status          ReceiptStatus @default(PENDING)
+  confidence      Float?
+  sha256          String?
+  perceptualHash  String?
+  verifiedBy      String?
+  verifiedAt      DateTime?
+  rejectionNote   String?
+  createdAt       DateTime      @default(now())
+  contract        Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  document        Document?     @relation(fields: [documentId], references: [id])
+
+  @@index([contractId])
+  @@index([sha256])
+}
+
+// ---------------------------------------------------------------------------
+// Files
+// ---------------------------------------------------------------------------
+
+model Document {
+  id             String         @id @default(cuid())
+  ownerId        String
+  listingId      String?
+  type           DocumentType
+  fileName       String
+  storageKey     String
+  mimeType       String
+  sizeBytes      Int
+  sha256         String
+  perceptualHash String?
+  pageCount      Int            @default(1)
+  status         DocumentStatus @default(UPLOADED)
+  blurScore      Float?
+  exifStripped   Boolean        @default(false)
+  hasExif        Boolean        @default(true)
+  softwareTag    String?
+  virusScanned   Boolean        @default(false)
+  redactedKey    String?
+  watermarkedKey String?
+  note           String?
+  createdAt      DateTime       @default(now())
+
+  owner      User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  listing    Listing?            @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  pages      DocumentPage[]
+  receipts   Receipt[]
+  accessLogs DocumentAccessLog[]
+
+  @@index([listingId, type])
+  @@index([sha256])
+}
+
+model DocumentPage {
+  id          String   @id @default(cuid())
+  documentId  String
+  pageNumber  Int
+  imageKey    String
+  width       Int
+  height      Int
+  textSnippet String?
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, pageNumber])
+}
+
+model DocumentAccessLog {
+  id         String   @id @default(cuid())
+  documentId String
+  userId     String?
+  action     String
+  ip         String?
+  userAgent  String?
+  at         DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([documentId, at])
+}
+
+model MediaAsset {
+  id               String           @id @default(cuid())
+  listingId        String
+  kind             MediaKind
+  roomTag          RoomTag?
+  caption          String?
+  altEn            String
+  altAr            String?
+  order            Int              @default(0)
+  isCover          Boolean          @default(false)
+  storageKey       String
+  variants         Json
+  blurhash         String?
+  dominantColor    String?
+  width            Int
+  height           Int
+  moderationStatus ModerationStatus @default(PENDING)
+  moderationNote   String?
+  attribution      Json?
+  createdAt        DateTime         @default(now())
+  listing          Listing          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, kind, order])
+}
+
+// ---------------------------------------------------------------------------
+// AI outputs
+// ---------------------------------------------------------------------------
+
+model Extraction {
+  id          String       @id @default(cuid())
+  listingId   String
+  documentId  String?
+  mode        ProviderMode
+  model       String
+  version     String
+  status      String       @default("SUCCEEDED")
+  latencyMs   Int
+  costUsd     Decimal      @db.Decimal(10, 6)
+  promptHash  String
+  rawResponse Json
+  createdAt   DateTime     @default(now())
+
+  listing Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  fields  ExtractionField[]
+
+  @@index([listingId])
+}
+
+model ExtractionField {
+  id           String           @id @default(cuid())
+  extractionId String
+  key          ContractFieldKey
+  valueNum     Decimal?         @db.Decimal(18, 2)
+  valueDate    DateTime?
+  valueText    String?
+  confidence   Float
+  documentId   String?
+  page         Int?
+  bbox         Json?
+  clauseText   String?
+  extraction   Extraction       @relation(fields: [extractionId], references: [id], onDelete: Cascade)
+
+  @@index([extractionId])
+}
+
+model Discrepancy {
+  id         String            @id @default(cuid())
+  listingId  String
+  fieldKey   ContractFieldKey
+  sourceA    ValueSource
+  valueA     Decimal?          @db.Decimal(18, 2)
+  valueAText String?
+  sourceB    ValueSource
+  valueB     Decimal?          @db.Decimal(18, 2)
+  valueBText String?
+  delta      Decimal?          @db.Decimal(18, 2)
+  deltaPct   Float?
+  severity   Severity
+  status     DiscrepancyStatus @default(OPEN)
+  titleEn    String
+  titleAr    String?
+  evidence   Json
+  resolution String?
+  resolvedTo ValueSource?
+  resolvedBy String?
+  resolvedAt DateTime?
+  createdAt  DateTime          @default(now())
+  listing    Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, status])
+}
+
+model FraudSignal {
+  id            String            @id @default(cuid())
+  listingId     String
+  type          FraudSignalType
+  severity      Severity
+  titleEn       String
+  titleAr       String?
+  description   String
+  evidence      Json
+  status        FraudSignalStatus @default(OPEN)
+  disposition   String?
+  dispositionBy String?
+  dispositionAt DateTime?
+  createdAt     DateTime          @default(now())
+  listing       Listing           @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, status])
+}
+
+model Valuation {
+  id             String                @id @default(cuid())
+  listingId      String
+  low            Decimal               @db.Decimal(18, 2)
+  mid            Decimal               @db.Decimal(18, 2)
+  high           Decimal               @db.Decimal(18, 2)
+  confidence     ValuationConfidence
+  method         String
+  drivers        Json
+  overrideLow    Decimal?              @db.Decimal(18, 2)
+  overrideMid    Decimal?              @db.Decimal(18, 2)
+  overrideHigh   Decimal?              @db.Decimal(18, 2)
+  overrideReason String?
+  overrideBy     String?
+  overrideAt     DateTime?
+  isSynthetic    Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+  listing        Listing               @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  comparables    ValuationComparable[]
+
+  @@index([listingId])
+}
+
+model ValuationComparable {
+  id          String    @id @default(cuid())
+  valuationId String
+  label       String
+  projectName String
+  unitType    UnitType
+  buaSqm      Decimal   @db.Decimal(10, 2)
+  price       Decimal   @db.Decimal(18, 2)
+  pricePerSqm Decimal   @db.Decimal(18, 2)
+  source      String
+  observedAt  DateTime
+  isSynthetic Boolean   @default(true)
+  valuation   Valuation @relation(fields: [valuationId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Listing + marketplace
+// ---------------------------------------------------------------------------
+
+model Listing {
+  id         String        @id @default(cuid())
+  reference  String        @unique
+  contractId String        @unique
+  sellerId   String
+  status     ListingStatus @default(DRAFT)
+
+  // seller exit terms
+  askingCash        Decimal?    @db.Decimal(18, 2)
+  flexibilityPct    Int         @default(0)
+  minAcceptableCash Decimal?    @db.Decimal(18, 2)
+  urgency           Urgency?
+  exitReason        ExitReason?
+  isPrivate         Boolean     @default(false)
+  exclusivityUntil  DateTime?
+
+  // buyer-facing read model, projected only from promoted verified values
+  totalContractPrice     Decimal?          @db.Decimal(18, 2)
+  verifiedAmountPaid     Decimal?          @db.Decimal(18, 2)
+  outstandingBalance     Decimal?          @db.Decimal(18, 2)
+  installmentAmount      Decimal?          @db.Decimal(18, 2)
+  installmentFrequency   PaymentFrequency?
+  remainingInstallments  Int?
+  nextDueDate            DateTime?
+  deliveryDate           DateTime?
+  developerAssignmentFee Decimal?          @db.Decimal(18, 2)
+  discountPctBps         Int?
+
+  verificationScore          Int?
+  verificationScoreBreakdown Json?
+
+  humanVerifiedBy  String?
+  humanVerifiedAt  DateTime?
+  publishedAt      DateTime?
+  submittedAt      DateTime?
+  rejectedAt       DateTime?
+  rejectionReason  String?
+  infoRequestItems Json?
+  infoRequestedAt  DateTime?
+
+  assignedAnalystId String?
+  slaDueAt          DateTime?
+  wizardStep        Int      @default(1)
+  wizardCompleted   Int[]    @default([])
+  viewCount         Int      @default(0)
+  isDemo            Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  contract      Contract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  seller        User           @relation("SellerListings", fields: [sellerId], references: [id], onDelete: Cascade)
+  analyst       User?          @relation("AnalystListings", fields: [assignedAnalystId], references: [id])
+  documents     Document[]
+  media         MediaAsset[]
+  extractions   Extraction[]
+  discrepancies Discrepancy[]
+  fraudSignals  FraudSignal[]
+  valuations    Valuation[]
+  matches       Match[]
+  offers        Offer[]
+  deal          Deal?
+  savedBy       SavedListing[]
+
+  @@index([status, publishedAt])
+  @@index([sellerId])
+  @@index([assignedAnalystId, status])
+  @@index([askingCash])
+  @@index([installmentAmount])
+  @@index([deliveryDate])
+}
+
+model Match {
+  id         String    @id @default(cuid())
+  listingId  String
+  buyerId    String
+  score      Int
+  reasons    Json
+  blockers   Json
+  computedAt DateTime  @default(now())
+  seenAt     DateTime?
+  listing    Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer      User      @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, buyerId])
+  @@index([buyerId, score])
+}
+
+model SavedListing {
+  id        String   @id @default(cuid())
+  buyerId   String
+  listingId String
+  createdAt DateTime @default(now())
+  buyer     User     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([buyerId, listingId])
+}
+
+model SavedSearch {
+  id              String    @id @default(cuid())
+  buyerId         String
+  name            String
+  filters         Json
+  alertsEnabled   Boolean   @default(true)
+  lastRunAt       DateTime?
+  lastResultCount Int       @default(0)
+  createdAt       DateTime  @default(now())
+  buyer           User      @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@index([buyerId])
+}
+
+// ---------------------------------------------------------------------------
+// Transaction
+// ---------------------------------------------------------------------------
+
+model Offer {
+  id                     String         @id @default(cuid())
+  listingId              String
+  buyerId                String
+  sellerId               String
+  parentOfferId          String?
+  direction              OfferDirection @default(BUYER_TO_SELLER)
+  amount                 Decimal        @db.Decimal(18, 2)
+  message                String?
+  proposedCompletionDays Int            @default(45)
+  proofOfFundsDocumentId String?
+  status                 OfferStatus    @default(PENDING)
+  expiresAt              DateTime
+  respondedAt            DateTime?
+  createdAt              DateTime       @default(now())
+
+  listing  Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer    User    @relation("BuyerOffers", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller   User    @relation("SellerOffers", fields: [sellerId], references: [id], onDelete: Cascade)
+  parent   Offer?  @relation("OfferThread", fields: [parentOfferId], references: [id])
+  counters Offer[] @relation("OfferThread")
+  deal     Deal?
+
+  @@index([listingId, status])
+  @@index([buyerId, status])
+  @@index([status, expiresAt])
+}
+
+model Deal {
+  id                     String     @id @default(cuid())
+  reference              String     @unique
+  listingId              String     @unique
+  offerId                String     @unique
+  buyerId                String
+  sellerId               String
+  coordinatorId          String?
+  status                 DealStatus @default(ACTIVE)
+  cashToSeller           Decimal    @db.Decimal(18, 2)
+  platformFee            Decimal    @db.Decimal(18, 2)
+  developerAssignmentFee Decimal    @db.Decimal(18, 2)
+  reservationDeposit     Decimal    @db.Decimal(18, 2)
+  contactUnmasked        Boolean    @default(false)
+  buyerRating            Int?
+  sellerRating           Int?
+  outcomeNotes           String?
+  createdAt              DateTime   @default(now())
+  completedAt            DateTime?
+  cancelledAt            DateTime?
+  cancellationReason     String?
+
+  listing     Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  offer       Offer       @relation(fields: [offerId], references: [id])
+  buyer       User        @relation("BuyerDeals", fields: [buyerId], references: [id])
+  seller      User        @relation("SellerDeals", fields: [sellerId], references: [id])
+  coordinator User?       @relation("CoordinatorDeals", fields: [coordinatorId], references: [id])
+  milestones  Milestone[]
+  payments    Payment[]
+  messages    Message[]
+
+  @@index([status])
+}
+
+model Milestone {
+  id                String          @id @default(cuid())
+  dealId            String
+  key               MilestoneKey
+  order             Int
+  status            MilestoneStatus @default(PENDING)
+  ownerRole         Role
+  dueDate           DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  completedBy       String?
+  blockedReason     String?
+  requiredDocuments String[]        @default([])
+  notes             String?
+  deal              Deal            @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@unique([dealId, key])
+  @@index([dealId, order])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  dealId         String
+  milestoneId    String?
+  kind           PaymentKind
+  amount         Decimal       @db.Decimal(18, 2)
+  currency       String        @default("EGP")
+  status         PaymentStatus @default(INITIATED)
+  provider       String
+  providerRef    String?
+  idempotencyKey String        @unique
+  instructionRef String
+  failureCode    String?
+  failureReason  String?
+  attempts       Int           @default(0)
+  initiatedBy    String
+  createdAt      DateTime      @default(now())
+  settledAt      DateTime?
+
+  deal   Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  events PaymentEvent[]
+
+  @@index([dealId, kind])
+}
+
+model PaymentEvent {
+  id        String   @id @default(cuid())
+  paymentId String
+  type      String
+  payload   Json
+  at        DateTime @default(now())
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, at])
+}
+
+model Message {
+  id                   String   @id @default(cuid())
+  dealId               String
+  senderId             String?
+  body                 String
+  isSystem             Boolean  @default(false)
+  attachmentDocumentId String?
+  readBy               String[] @default([])
+  createdAt            DateTime @default(now())
+  deal                 Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  sender               User?    @relation(fields: [senderId], references: [id])
+
+  @@index([dealId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Cross-cutting
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id             String           @id @default(cuid())
+  userId         String
+  type           NotificationType
+  titleEn        String
+  titleAr        String
+  bodyEn         String
+  bodyAr         String
+  linkHref       String?
+  channel        String           @default("IN_APP")
+  deliveryStatus String           @default("DELIVERED")
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model Consent {
+  id          String      @id @default(cuid())
+  userId      String
+  type        ConsentType
+  granted     Boolean
+  textVersion String
+  ip          String?
+  userAgent   String?
+  at          DateTime    @default(now())
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+/// Append-only. Never updated, never deleted.
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorRole  Role?
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  metadata   Json?
+  ip         String?
+  at         DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId, at])
+  @@index([actorId, at])
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  type        String
+  payload     Json
+  status      JobStatus @default(QUEUED)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  runAt       DateTime  @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  lastError   String?
+  result      Json?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, runAt])
+}

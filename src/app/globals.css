@@ -1,0 +1,307 @@
+@import "tailwindcss";
+
+/* ===========================================================================
+   AQARY DESIGN TOKENS
+   Information-Architecture school × Modern-Tool SaaS.
+   Every colour, space, radius, shadow and type step in the product comes from
+   here. Components never introduce raw hex — see eslint rule `no-raw-hex`.
+   =========================================================================== */
+
+@theme {
+  /* --- Ground & ink ------------------------------------------------------ */
+  /* Warm paper ground; a deep desaturated green-black institutional base.   */
+  --color-paper: oklch(0.978 0.006 85);      /* #FAF8F3 page ground          */
+  --color-paper-raised: oklch(1 0 0);         /* #FFFFFF cards               */
+  --color-paper-sunken: oklch(0.955 0.008 85);/* #F1EDE6 wells, table zebra  */
+  --color-ink: oklch(0.215 0.019 168);        /* #14211E primary text/base   */
+  --color-ink-90: oklch(0.28 0.018 168);
+  --color-ink-70: oklch(0.44 0.014 168);      /* secondary text              */
+  --color-ink-50: oklch(0.60 0.011 168);      /* tertiary text, axis labels  */
+  --color-ink-30: oklch(0.78 0.008 168);      /* disabled                    */
+  --color-rule: oklch(0.886 0.008 85);        /* hairline — the signature    */
+  --color-rule-strong: oklch(0.80 0.010 85);
+
+  /* --- Accents (max 4 + semantics) --------------------------------------- */
+  --color-brass: oklch(0.665 0.107 71);       /* #B4833C primary action      */
+  --color-brass-hover: oklch(0.605 0.104 71);
+  --color-brass-soft: oklch(0.945 0.030 76);
+  --color-verdigris: oklch(0.505 0.086 172);  /* #26685C verified / positive */
+  --color-verdigris-soft: oklch(0.945 0.024 172);
+
+  /* --- Semantic verification states -------------------------------------- */
+  --color-verified: oklch(0.505 0.086 172);
+  --color-verified-soft: oklch(0.945 0.024 172);
+  --color-pending: oklch(0.635 0.105 78);
+  --color-pending-soft: oklch(0.955 0.033 82);
+  --color-flagged: oklch(0.525 0.148 28);     /* clay red                    */
+  --color-flagged-soft: oklch(0.948 0.026 32);
+  --color-info: oklch(0.505 0.062 245);
+  --color-info-soft: oklch(0.949 0.018 245);
+
+  /* --- Dark surfaces (marketing sections, analyst chrome) ----------------- */
+  --color-ink-surface: oklch(0.215 0.019 168);
+  --color-ink-surface-raised: oklch(0.263 0.021 168);
+  --color-ink-rule: oklch(0.335 0.019 168);
+  --color-ink-text: oklch(0.955 0.006 85);
+  --color-ink-text-70: oklch(0.775 0.010 168);
+  --color-ink-text-50: oklch(0.635 0.012 168);
+
+  /* --- Type -------------------------------------------------------------- */
+  --font-display: var(--font-newsreader), "Newsreader", Georgia, serif;
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-arabic: var(--font-plex-arabic), "IBM Plex Sans Arabic", "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+
+  --text-2xs: 0.6875rem;   /* 11px — provenance chips, table meta */
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.9375rem;  /* 15px UI body */
+  --text-base--line-height: 1.5rem;
+  --text-md: 1.0625rem;    /* 17px reading body */
+  --text-md--line-height: 1.7rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.6rem;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 1.85rem;
+  --text-2xl: 1.9375rem;
+  --text-2xl--line-height: 2.2rem;
+  --text-3xl: 2.5rem;
+  --text-3xl--line-height: 2.7rem;
+  --text-4xl: 3.25rem;
+  --text-4xl--line-height: 3.35rem;
+  --text-5xl: 4.25rem;
+  --text-5xl--line-height: 4.25rem;
+  --text-6xl: 5.5rem;
+  --text-6xl--line-height: 5.3rem;
+
+  /* Money has its own scale — "cash to seller" is the hero of a card. */
+  --text-money-sm: 1.0625rem;
+  --text-money-md: 1.5rem;
+  --text-money-lg: 2.125rem;
+  --text-money-xl: 3rem;
+
+  /* --- Space (4px base) --------------------------------------------------- */
+  --spacing: 0.25rem;
+
+  /* --- Radius: small and consistent -------------------------------------- */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* --- Elevation: only for genuine layering ------------------------------ */
+  --shadow-e1: 0 1px 2px oklch(0.215 0.019 168 / 0.05);
+  --shadow-e2: 0 2px 4px oklch(0.215 0.019 168 / 0.06), 0 1px 2px oklch(0.215 0.019 168 / 0.04);
+  --shadow-e3: 0 8px 24px oklch(0.215 0.019 168 / 0.10), 0 2px 6px oklch(0.215 0.019 168 / 0.05);
+  --shadow-e4: 0 20px 56px oklch(0.215 0.019 168 / 0.16), 0 4px 12px oklch(0.215 0.019 168 / 0.07);
+
+  /* --- Motion ------------------------------------------------------------ */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ===========================================================================
+   Base
+   =========================================================================== */
+
+@layer base {
+  * {
+    border-color: var(--color-rule);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    font-feature-settings: "cv05" 1, "ss01" 1;
+    text-wrap: pretty;
+    margin: 0;
+  }
+
+  html[dir="rtl"] body {
+    font-family: var(--font-arabic);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  html[dir="rtl"] h1,
+  html[dir="rtl"] h2,
+  html[dir="rtl"] h3 {
+    font-family: var(--font-arabic);
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  h4, h5, h6 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    margin: 0;
+  }
+
+  p { margin: 0; }
+
+  /* Every EGP figure aligns in a column. Non-negotiable. */
+  .tnum,
+  table td,
+  table th {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brass);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  ::selection {
+    background: var(--color-brass-soft);
+    color: var(--color-ink);
+  }
+
+  /* Latin numerals inside Arabic UI stay legible and tabular. */
+  .num-latin {
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums lining-nums;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+}
+
+/* ===========================================================================
+   Utilities that encode the design language
+   =========================================================================== */
+
+@layer utilities {
+  /* The hairline rule is the structural signature — term-sheet density. */
+  .rule-t { border-block-start: 1px solid var(--color-rule); }
+  .rule-b { border-block-end: 1px solid var(--color-rule); }
+  .rule-s { border-inline-start: 1px solid var(--color-rule); }
+  .rule-e { border-inline-end: 1px solid var(--color-rule); }
+
+  .money {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    letter-spacing: -0.02em;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--color-ink-50);
+  }
+
+  .display-hero {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(2.5rem, 6.2vw, 5.5rem);
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+  }
+
+  .display-section {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(1.9rem, 3.6vw, 3.1rem);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+  }
+
+  html[dir="rtl"] .display-hero,
+  html[dir="rtl"] .display-section {
+    font-family: var(--font-arabic);
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.25;
+  }
+
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: radial-gradient(
+      var(--color-rule) 0.5px,
+      transparent 0.5px
+    );
+    background-size: 4px 4px;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-rule-strong) transparent;
+  }
+
+  .animate-in-up {
+    animation: aq-in-up 0.5s var(--ease-out-quint) both;
+  }
+
+  .animate-fade {
+    animation: aq-fade 0.35s var(--ease-standard) both;
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--color-paper-sunken) 25%,
+      oklch(0.975 0.006 85) 37%,
+      var(--color-paper-sunken) 63%
+    );
+    background-size: 400% 100%;
+    animation: aq-shimmer 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes aq-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes aq-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes aq-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer utilities {
+  /* Keeps a Latin run (a figure, a unit, a code) from reordering inside RTL text. */
+  .unicode-bidi-isolate {
+    unicode-bidi: isolate;
+  }
+}

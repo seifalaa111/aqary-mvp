@@ -1,0 +1,25 @@
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets. `.env*` is deliberately broad — `vercel link` and `vercel env pull`
+# both drop credential files here — so the example is re-included explicitly.
+.env*
+!.env.example
+.vercel
+
+# Generated, and reproducible from a clean clone:
+#   public/property  ← npm run assets:fetch   (downloads the photography)
+#   storage          ← npm run seed           (renders contracts and receipts)
+# Both are large binary trees whose contents are keyed to seeded row IDs, so
+# committing them would go stale the moment anyone reseeds.
+storage/
+public/media/
+public/property/
+
+test-results/
+playwright-report/
+coverage/
