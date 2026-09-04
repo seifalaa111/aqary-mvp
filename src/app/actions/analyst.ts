@@ -377,6 +377,12 @@ export async function reviewKyc(input: {
         where: { userId: input.userId, tier: "BROWSER" },
         data: { tier: "VERIFIED" },
       });
+    } else if (input.status === "REJECTED") {
+      // Rejection demotes buyer back to browser
+      await prisma.buyerProfile.updateMany({
+        where: { userId: input.userId },
+        data: { tier: "BROWSER" },
+      });
     }
 
     await audit({
@@ -397,6 +403,150 @@ export async function reviewKyc(input: {
   }
 }
 
+export async function reviewDocumentAction(input: {
+  documentId: string;
+  status: "APPROVED" | "REJECTED" | "NEEDS_REPLACEMENT";
+  reason?: string;
+}): Promise<AnalystResult> {
+  try {
+    const analyst = await requireRole("ANALYST", "ADMIN");
+    if ((input.status === "REJECTED" || input.status === "NEEDS_REPLACEMENT") && (!input.reason || input.reason.trim().length < 8)) {
+      throw new Error("A reason of at least 8 characters is required for rejection or replacement requests");
+    }
+
+    const doc = await prisma.document.findUniqueOrThrow({
+      where: { id: input.documentId },
+      include: { owner: true },
+    });
+
+    const updated = await prisma.document.update({
+      where: { id: input.documentId },
+      data: {
+        status: input.status,
+        reviewedBy: analyst.id,
+        reviewedAt: new Date(),
+        rejectionReason: input.reason?.trim() ?? null,
+      },
+    });
+
+    // Check if this document affects the user's KYC tier or verification
+    const isIdentityDoc = ["NATIONAL_ID_FRONT", "NATIONAL_ID_BACK", "PASSPORT", "PROOF_OF_ADDRESS"].includes(doc.type);
+    if (isIdentityDoc) {
+      if (input.status === "APPROVED") {
+        // Check if user now has both a verified ID and verified address
+        const userDocs = await prisma.document.findMany({
+          where: { ownerId: doc.ownerId, status: "APPROVED" },
+          select: { type: true },
+        });
+        const hasId = userDocs.some((d) => d.type === "NATIONAL_ID_FRONT" || d.type === "PASSPORT");
+        const hasAddress = userDocs.some((d) => d.type === "PROOF_OF_ADDRESS");
+
+        if (hasId && hasAddress) {
+          await prisma.user.update({
+            where: { id: doc.ownerId },
+            data: { kycStatus: "VERIFIED" },
+          });
+          await prisma.buyerProfile.updateMany({
+            where: { userId: doc.ownerId, tier: "BROWSER" },
+            data: { tier: "VERIFIED" },
+          });
+        }
+      } else {
+        // If an identity document is rejected or needs replacement, demote tier to BROWSER
+        await prisma.user.update({
+          where: { id: doc.ownerId },
+          data: { kycStatus: "PENDING" },
+        });
+        await prisma.buyerProfile.updateMany({
+          where: { userId: doc.ownerId },
+          data: { tier: "BROWSER" },
+        });
+      }
+    }
+
+    await audit({
+      actorId: analyst.id,
+      actorRole: "ANALYST",
+      action: "KYC_REVIEWED",
+      entityType: "Document",
+      entityId: doc.id,
+      before: { status: doc.status },
+      after: { status: updated.status, reason: input.reason },
+      metadata: { ownerId: doc.ownerId, type: doc.type },
+    });
+
+    revalidatePath("/analyst/users");
+    revalidatePath("/buyer/verification");
+    revalidatePath("/buyer/documents");
+    return { ok: true };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function verifyProofOfFundsAction(input: {
+  userId: string;
+  verifiedCash: number;
+  verifiedInstallment?: number;
+  note?: string;
+}): Promise<AnalystResult> {
+  try {
+    const analyst = await requireRole("ANALYST", "ADMIN");
+    if (input.verifiedCash <= 0) {
+      throw new Error("Verified cash amount must be greater than zero");
+    }
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: input.userId } });
+    if (user.kycStatus !== "VERIFIED") {
+      throw new Error("User identity KYC must be verified before granting Priority Tier");
+    }
+
+    const before = await prisma.buyerProfile.findUnique({ where: { userId: input.userId } });
+    await prisma.buyerProfile.update({
+      where: { userId: input.userId },
+      data: {
+        verifiedAvailableCash: input.verifiedCash.toString(),
+        verifiedMaxInstallment: input.verifiedInstallment ? input.verifiedInstallment.toString() : null,
+        tier: "PRIORITY",
+        proofOfFundsVerifiedAt: new Date(),
+        proofOfFundsVerifiedBy: analyst.id,
+      },
+    });
+
+    // Mark user's proof of funds documents as APPROVED
+    await prisma.document.updateMany({
+      where: {
+        ownerId: input.userId,
+        type: { in: ["PROOF_OF_FUNDS", "BANK_TRANSFER_STATEMENT"] },
+        status: { in: ["UPLOADED", "NEEDS_REPLACEMENT"] },
+      },
+      data: {
+        status: "APPROVED",
+        reviewedBy: analyst.id,
+        reviewedAt: new Date(),
+      },
+    });
+
+    await audit({
+      actorId: analyst.id,
+      actorRole: "ANALYST",
+      action: "KYC_REVIEWED",
+      entityType: "BuyerProfile",
+      entityId: input.userId,
+      before: { tier: before?.tier, cash: before?.verifiedAvailableCash?.toString() },
+      after: { tier: "PRIORITY", cash: input.verifiedCash, installment: input.verifiedInstallment },
+      metadata: { note: input.note },
+    });
+
+    revalidatePath("/analyst/users");
+    revalidatePath("/buyer/capacity");
+    revalidatePath("/buyer/verification");
+    return { ok: true };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
 export async function promoteBuyerTier(input: {
   userId: string;
   tier: "BROWSER" | "VERIFIED" | "PRIORITY";
@@ -404,25 +554,43 @@ export async function promoteBuyerTier(input: {
 }): Promise<AnalystResult> {
   try {
     const analyst = await requireRole("ANALYST", "ADMIN");
-    const before = await prisma.buyerProfile.findUnique({ where: { userId: input.userId } });
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: input.userId } });
+    const profile = await prisma.buyerProfile.findUnique({ where: { userId: input.userId } });
+
+    if (input.tier === "VERIFIED" && user.kycStatus !== "VERIFIED") {
+      throw new Error("Cannot promote to VERIFIED: User identity KYC must be verified first");
+    }
+
+    if (input.tier === "PRIORITY") {
+      if (user.kycStatus !== "VERIFIED") {
+        throw new Error("Cannot promote to PRIORITY: User identity KYC must be verified first");
+      }
+      if (!profile?.verifiedAvailableCash && !profile?.proofOfFundsVerifiedAt) {
+        throw new Error("Cannot promote to PRIORITY: Verified proof of funds is required");
+      }
+    }
+
+    const before = profile?.tier;
     await prisma.buyerProfile.update({
       where: { userId: input.userId },
       data: {
         tier: input.tier,
-        proofOfFundsVerifiedAt: input.tier === "PRIORITY" ? new Date() : null,
-        proofOfFundsVerifiedBy: input.tier === "PRIORITY" ? analyst.id : null,
+        proofOfFundsVerifiedAt: input.tier === "PRIORITY" ? (profile?.proofOfFundsVerifiedAt ?? new Date()) : null,
+        proofOfFundsVerifiedBy: input.tier === "PRIORITY" ? (profile?.proofOfFundsVerifiedBy ?? analyst.id) : null,
       },
     });
+
     await audit({
       actorId: analyst.id,
       actorRole: "ANALYST",
       action: "KYC_REVIEWED",
       entityType: "BuyerProfile",
       entityId: input.userId,
-      before: { tier: before?.tier },
+      before: { tier: before },
       after: { tier: input.tier },
       metadata: { note: input.note },
     });
+
     revalidatePath("/analyst/users");
     return { ok: true };
   } catch (err) {

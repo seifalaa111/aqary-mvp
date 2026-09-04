@@ -1,5 +1,5 @@
 import "server-only";
-import type { ContractFieldKey, ValueSource } from "@prisma/client";
+import type { ContractFieldKey, MediaKind, Prisma, ValueSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { FIELD_KINDS } from "@/lib/domain/fields";
@@ -317,12 +317,23 @@ export async function moderateMedia(args: {
   mediaId: string;
   analystId: string;
   status: "APPROVED" | "FLAGGED" | "REJECTED";
+  kind?: MediaKind;
   note?: string;
 }) {
   const before = await prisma.mediaAsset.findUniqueOrThrow({ where: { id: args.mediaId } });
+  const data: Prisma.MediaAssetUpdateInput = {
+    moderationStatus: args.status,
+    moderationNote: args.note ?? null,
+  };
+  if (args.kind && args.kind !== before.kind) {
+    data.kind = args.kind;
+    if (!before.claimedKind) {
+      data.claimedKind = before.kind;
+    }
+  }
   const updated = await prisma.mediaAsset.update({
     where: { id: args.mediaId },
-    data: { moderationStatus: args.status, moderationNote: args.note ?? null },
+    data,
   });
   await audit({
     actorId: args.analystId,
@@ -330,9 +341,9 @@ export async function moderateMedia(args: {
     action: "MEDIA_MODERATED",
     entityType: "MediaAsset",
     entityId: args.mediaId,
-    before: { moderationStatus: before.moderationStatus },
-    after: { moderationStatus: args.status },
-    metadata: { listingId: before.listingId, note: args.note },
+    before: { moderationStatus: before.moderationStatus, kind: before.kind },
+    after: { moderationStatus: args.status, kind: updated.kind },
+    metadata: { listingId: before.listingId, note: args.note, reclassified: !!args.kind },
   });
   await computeVerificationScore(before.listingId);
   return updated;

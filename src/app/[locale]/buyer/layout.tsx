@@ -13,12 +13,13 @@ export default async function BuyerLayout({
 }) {
   const { locale } = await params;
   const user = await requireRolePage("BUYER");
-  const t = await getTranslations({ locale, namespace: "buyer" });
   const tn = await getTranslations({ locale, namespace: "nav" });
+  const tbn = await getTranslations({ locale, namespace: "buyerNav" });
 
-  const [openOffers, saved] = await Promise.all([
+  const [openOffers, saved, docsCount] = await Promise.all([
     prisma.offer.count({ where: { buyerId: user.id, status: { in: ["PENDING", "COUNTERED"] } } }),
     prisma.savedListing.count({ where: { buyerId: user.id } }),
+    prisma.document.count({ where: { ownerId: user.id, listingId: null } }),
   ]);
 
   return (
@@ -26,11 +27,15 @@ export default async function BuyerLayout({
       locale={locale}
       role="BUYER"
       nav={[
+        { href: "/buyer", label: tbn("overview") },
+        { href: "/buyer/verification", label: tbn("verification") },
+        { href: "/buyer/capacity", label: tbn("capacity") },
+        { href: "/buyer/matches", label: tbn("matches") },
         { href: "/opportunities", label: tn("marketplace") },
-        { href: "/buyer/matches", label: "Matches" },
-        { href: "/buyer/offers", label: t("myOffers"), badge: openOffers || undefined },
-        { href: "/buyer/saved", label: t("savedListings"), badge: saved || undefined },
-        { href: "/deals", label: "Deals" },
+        { href: "/buyer/offers", label: tbn("offers"), badge: openOffers || undefined },
+        { href: "/buyer/saved", label: tbn("saved"), badge: saved || undefined },
+        { href: "/deals", label: tbn("deals") },
+        { href: "/buyer/documents", label: tbn("documents"), badge: docsCount || undefined },
       ]}
     >
       {children}

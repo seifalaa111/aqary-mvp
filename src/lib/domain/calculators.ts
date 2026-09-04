@@ -227,6 +227,88 @@ export function remainingTotal(rows: ScheduleRow[], asOf: Date): Decimal {
   return remainingInstallments(rows, asOf).reduce((acc, r) => acc.plus(r.amount), money(0));
 }
 
+export type EvaluatedInstallmentStatus = "PAID" | "DUE" | "UPCOMING" | "OVERDUE" | "UNVERIFIED";
+
+/**
+ * Pure evaluator for installment status.
+ * Never assumes dueDate <= now means PAID.
+ * An installment is PAID only when backed by verified payment evidence.
+ */
+export function determineInstallmentStatus(args: {
+  dueDate: Date;
+  amount: MoneyInput;
+  cumulativeAmountBeforeThisRow: MoneyInput;
+  verifiedFunds: MoneyInput;
+  asOf: Date;
+  sellerClaimedPaid?: boolean;
+  dueWindowDays?: number;
+}): { status: EvaluatedInstallmentStatus; paidAmount: Decimal } {
+  const amount = money(args.amount);
+  const cumulative = money(args.cumulativeAmountBeforeThisRow);
+  const verified = money(args.verifiedFunds);
+  const asOf = args.asOf;
+  const dueWindowDays = args.dueWindowDays ?? 30;
+
+  const availableForThisRow = Decimal.max(0, verified.minus(cumulative));
+  const paidAmount = Decimal.min(amount, availableForThisRow);
+
+  if (paidAmount.gte(amount)) {
+    return { status: "PAID", paidAmount: amount };
+  }
+
+  // Not fully covered by verified funds
+  const isPastDue = args.dueDate.getTime() < asOf.getTime();
+  if (isPastDue) {
+    if (args.sellerClaimedPaid) {
+      return { status: "UNVERIFIED", paidAmount };
+    }
+    return { status: "OVERDUE", paidAmount };
+  }
+
+  // Current window check
+  const windowEnd = asOf.getTime() + dueWindowDays * 86_400_000;
+  if (args.dueDate.getTime() <= windowEnd) {
+    return { status: "DUE", paidAmount };
+  }
+
+  return { status: "UPCOMING", paidAmount };
+}
+
+export function evaluateScheduleStatuses(
+  rows: ScheduleRow[],
+  evidence: {
+    verifiedAmountPaid?: MoneyInput | null;
+    verifiedReceiptsTotal?: MoneyInput | null;
+    asOf?: Date;
+    sellerClaimedPaidUpToDate?: Date | null;
+  },
+): (ScheduleRow & { status: EvaluatedInstallmentStatus; paidAmount: Decimal })[] {
+  const asOf = evidence.asOf ?? new Date();
+  const verifiedFunds = money(evidence.verifiedAmountPaid ?? evidence.verifiedReceiptsTotal ?? 0);
+  let cumulative = money(0);
+
+  return rows.map((row) => {
+    const sellerClaimed = Boolean(
+      evidence.sellerClaimedPaidUpToDate &&
+        row.dueDate.getTime() <= evidence.sellerClaimedPaidUpToDate.getTime(),
+    );
+    const evalRes = determineInstallmentStatus({
+      dueDate: row.dueDate,
+      amount: row.amount,
+      cumulativeAmountBeforeThisRow: cumulative,
+      verifiedFunds,
+      asOf,
+      sellerClaimedPaid: sellerClaimed,
+    });
+    cumulative = cumulative.plus(row.amount);
+    return {
+      ...row,
+      status: evalRes.status,
+      paidAmount: evalRes.paidAmount,
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Balances
 // ---------------------------------------------------------------------------

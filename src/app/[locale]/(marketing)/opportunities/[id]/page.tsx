@@ -74,7 +74,15 @@ export default async function OpportunityPage({
       : null,
     similarOpportunities(id),
     user
-      ? prisma.consent.findFirst({ where: { userId: user.id, type: "BUYER_CONFIDENTIALITY", granted: true } })
+      ? prisma.consent.findUnique({
+          where: {
+            userId_listingId_type: {
+              userId: user.id,
+              listingId: id,
+              type: "BUYER_CONFIDENTIALITY",
+            },
+          },
+        })
       : null,
   ]);
 

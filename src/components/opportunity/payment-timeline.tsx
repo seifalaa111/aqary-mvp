@@ -59,7 +59,9 @@ export function PaymentTimeline({
   // instalment would otherwise flatten every other bar into a stub.
   const regular = rows.filter((r) => r.kind === "REGULAR").map((r) => Number(r.amount));
   const max = regular.length > 0 ? Math.max(...regular) : Math.max(...rows.map((r) => Number(r.amount)));
-  const paidCount = rows.filter((r) => new Date(r.dueDate).getTime() <= now).length;
+  const paidCount = rows.filter(
+    (r) => r.status === "PAID" || (!r.status && new Date(r.dueDate).getTime() <= now),
+  ).length;
 
   // Receipts are matched to instalments by nearest date within 45 days.
   const receiptFor = (row: TimelineRow) => {
@@ -96,29 +98,54 @@ export function PaymentTimeline({
         <div className="overflow-x-auto pb-2 scrollbar-thin">
           <div className="flex min-w-full items-end gap-1" style={{ height: 140 }}>
             {rows.map((r) => {
-              const paid = new Date(r.dueDate).getTime() <= now;
+              const isPaid = r.status === "PAID" || (!r.status && new Date(r.dueDate).getTime() <= now);
+              const isOverdue = r.status === "OVERDUE";
+              const isUnverified = r.status === "UNVERIFIED";
+              const isDue = r.status === "DUE";
               const milestone = r.kind !== "REGULAR" && r.kind !== "DOWN_PAYMENT";
               // Anything larger than a regular instalment is capped and hatched
               // so it reads as "bigger than the rest" without hiding them.
               const ratio = Number(r.amount) / max;
               const h = Math.max(10, Math.min(1, ratio) * 108) + (ratio > 1 ? 14 : 0);
-              const receipt = paid ? receiptFor(r) : null;
+              const receipt = isPaid ? receiptFor(r) : null;
+              const barColor = isPaid
+                ? milestone || ratio > 1
+                  ? "bg-brass"
+                  : "bg-verified"
+                : isOverdue || isUnverified
+                  ? "border border-b-0 border-flagged bg-flagged-soft"
+                  : isDue
+                    ? "border border-b-0 border-pending bg-pending-soft"
+                    : ratio > 1
+                      ? "border border-b-0 border-brass bg-brass-soft"
+                      : "border border-b-0 border-rule-strong bg-paper-sunken";
               const bar = (
                 <span
                   className={cn(
                     "block w-full rounded-t-xs transition-all duration-150",
-                    paid
-                      ? milestone || ratio > 1
-                        ? "bg-brass"
-                        : "bg-verified"
-                      : ratio > 1
-                        ? "border border-b-0 border-brass bg-brass-soft"
-                        : "border border-b-0 border-rule-strong bg-paper-sunken",
+                    barColor,
                     hover === r.sequence && "brightness-110",
                   )}
                   style={{ height: h }}
                 />
               );
+              const badgeTone = isPaid
+                ? "verified"
+                : isOverdue || isUnverified
+                  ? "flagged"
+                  : isDue
+                    ? "pending"
+                    : "neutral";
+              const badgeText = isPaid
+                ? labels.paid
+                : isOverdue
+                  ? "Overdue"
+                  : isUnverified
+                    ? "Unverified"
+                    : isDue
+                      ? "Due"
+                      : labels.upcoming;
+
               return (
                 <div
                   key={r.sequence}
@@ -143,7 +170,7 @@ export function PaymentTimeline({
                       <p className="money text-sm font-semibold text-ink">{egp(r.amount, { decimals: 0 })}</p>
                       <p className="text-2xs text-ink-50">{formatDate(r.dueDate, locale)}</p>
                       <div className="mt-1.5 flex flex-wrap gap-1">
-                        <Badge tone={paid ? "verified" : "neutral"}>{paid ? labels.paid : labels.upcoming}</Badge>
+                        <Badge tone={badgeTone}>{badgeText}</Badge>
                         {milestone ? <Badge tone="brass">{r.kind.toLowerCase()}</Badge> : null}
                       </div>
                       {receipt && unlocked ? (

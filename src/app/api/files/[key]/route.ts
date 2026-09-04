@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { storage, verifyKeySignature } from "@/lib/providers/storage";
 import { getSessionUser } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
+import { isSensitive, canReadWithConsent } from "@/lib/domain/document-access";
 
 /**
  * Documents are never served from a static path. Every read requires either a
@@ -25,13 +26,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ key: string
   const user = await getSessionUser();
 
   // Find the document this key belongs to so we can authorise and log.
-  const baseKey = key.replace(/\.page-\d+\.webp$/, "");
+  const baseKey = key.replace(/\.page-\d+\.webp$/, "").replace(/#page=\d+$/, "");
   const document = await prisma.document.findFirst({
     where: { storageKey: baseKey },
     select: {
       id: true,
       ownerId: true,
       listingId: true,
+      type: true,
       mimeType: true,
       listing: { select: { id: true, status: true, sellerId: true } },
     },
@@ -45,16 +47,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ key: string
     const isOwner = document.ownerId === user.id;
     let allowed = isStaff || isOwner;
 
-    if (!allowed && document.listingId) {
-      // Confidentiality consent is necessary but never sufficient. A buyer
-      // must be a concrete offer/deal participant; otherwise a single consent
-      // row would unlock every seller contract on the marketplace.
-      const [consent, involved, developerDeal] = await Promise.all([
-        prisma.consent.findFirst({
-          where: { userId: user.id, type: "BUYER_CONFIDENTIALITY", granted: true },
-        }),
-        prisma.offer.count({
-          where: { listingId: document.listingId, buyerId: user.id },
+    // Sensitive documents are locked strictly to owner and compliance staff — zero leakage.
+    if (!allowed && !isSensitive(document.type) && document.listingId) {
+      const [consent, developerDeal] = await Promise.all([
+        prisma.consent.findUnique({
+          where: {
+            userId_listingId_type: {
+              userId: user.id,
+              listingId: document.listingId,
+              type: "BUYER_CONFIDENTIALITY",
+            },
+          },
         }),
         user.roles.includes("DEVELOPER_PARTNER")
           ? prisma.deal.findFirst({
@@ -66,8 +69,16 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ key: string
             })
           : null,
       ]);
+
+      const isListingActive =
+        document.listing &&
+        ["LISTED", "UNDER_OFFER", "RESERVED", "ASSIGNMENT_IN_PROGRESS", "COMPLETED"].includes(
+          document.listing.status,
+        );
+
       allowed =
-        (Boolean(consent) && involved > 0) || Boolean(developerDeal);
+        (canReadWithConsent(document.type) && Boolean(consent && consent.granted) && Boolean(isListingActive)) ||
+        Boolean(developerDeal);
     }
 
     if (!allowed) {

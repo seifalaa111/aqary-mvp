@@ -10,9 +10,11 @@ import {
   buildInstallmentSchedule,
   checkAskingCash,
   developerAssignmentFee,
+  evaluateScheduleStatuses,
   minAcceptableCash,
   remainingInstallments,
   remainingTotal,
+  sumReceipts,
   totalEffectiveCost,
   type Frequency,
 } from "@/lib/domain/calculators";
@@ -308,23 +310,37 @@ export async function projectVerifiedReadModel(
       installmentAmount: instAmount ?? undefined,
     });
     const now = new Date();
-    const rest = remainingInstallments(rows, now);
-    remainingCount = rest.length;
-    remainingSum = remainingTotal(rows, now);
-    nextDue = rest[0]?.dueDate ?? nextDue;
+    const verifiedReceipts = await db.receipt.findMany({
+      where: { contractId: listing.contractId, status: "VERIFIED" },
+      select: { verifiedAmount: true },
+    });
+    const receiptsTotal = sumReceipts(verifiedReceipts.map((r) => r.verifiedAmount ?? 0));
+
+    const evaluated = evaluateScheduleStatuses(rows, {
+      verifiedAmountPaid: amountPaid,
+      verifiedReceiptsTotal: receiptsTotal,
+      asOf: now,
+    });
+
+    const unpaidRows = evaluated.filter((r) => r.status !== "PAID");
+    remainingCount = unpaidRows.length;
+    remainingSum = unpaidRows.reduce((acc, r) => acc.plus(r.amount), money(0));
+    const nextDueRow = unpaidRows.find((r) => r.status === "DUE" || r.dueDate >= now) ?? unpaidRows[0];
+    nextDue = nextDueRow?.dueDate ?? nextDue;
 
     // Persist the verified schedule so the buyer-facing table is real rows.
     await db.installment.deleteMany({
       where: { contractId: listing.contractId, source: "ANALYST_VERIFIED" },
     });
     await db.installment.createMany({
-      data: rows.map((r) => ({
+      data: evaluated.map((r) => ({
         contractId: listing.contractId,
         sequence: r.sequence,
         kind: r.kind,
         dueDate: r.dueDate,
         amount: r.amount.toFixed(2),
-        status: r.dueDate < now ? ("PAID" as const) : ("UPCOMING" as const),
+        status: r.status,
+        paidAmount: r.paidAmount.toFixed(2),
         runningBalance: r.runningBalance.toFixed(2),
         source: "ANALYST_VERIFIED" as const,
         label: r.label ?? null,

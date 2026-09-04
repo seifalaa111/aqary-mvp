@@ -63,7 +63,7 @@ export async function startOrResumeDraft(): Promise<SellerResult<{ listingId: st
       const unit = await tx.unit.create({
         data: {
           projectId: placeholderProject.id,
-          unitCode: `DRAFT-${reference}`,
+          unitCode: `DRAFT-${reference}-${Date.now()}`,
           unitType: "APARTMENT",
           buaSqm: "0",
           bedrooms: 0,

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { DocumentType, MediaKind, RoomTag } from "@prisma/client";
-import { requireDealAccess, requireListingAccess, AuthorizationError } from "@/lib/auth/guard";
+import { requireDealAccess, requireListingAccess, requireUser, AuthorizationError } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { ACCEPTED_MIME, MAX_UPLOAD_BYTES, uploadDocument, uploadMedia } from "@/lib/services/uploads";
 
@@ -8,9 +8,8 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
- * One upload endpoint for documents and listing media. Authorization is checked
- * against the listing before a byte is written, and the seller may only write to
- * a listing that is still theirs to edit.
+ * One upload endpoint for documents, listing media, and buyer KYC. Authorization is checked
+ * before a byte is written.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +18,7 @@ export async function POST(req: NextRequest) {
     const target = String(form.get("target") ?? "document");
     const file = form.get("file");
 
-    if (!listingId) return bad("listingId is required");
+    if (target !== "buyer-kyc" && !listingId) return bad("listingId is required");
     if (!(file instanceof File)) return bad("file is required");
     if (file.size === 0) return bad("That file is empty");
     if (file.size > MAX_UPLOAD_BYTES) {
@@ -27,6 +26,31 @@ export async function POST(req: NextRequest) {
     }
     if (!ACCEPTED_MIME.has(file.type)) {
       return bad("Upload a JPEG, PNG, WebP or PDF");
+    }
+
+    if (target === "buyer-kyc") {
+      const user = await requireUser();
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const docType = String(form.get("type") ?? "NATIONAL_ID_FRONT") as DocumentType;
+      const result = await uploadDocument({
+        buffer,
+        fileName: file.name,
+        mimeType: file.type,
+        type: docType,
+        ownerId: user.id,
+        listingId: null,
+        actorRole: "BUYER",
+      });
+
+      const userRecord = await prisma.user.findUnique({ where: { id: user.id } });
+      if (userRecord && userRecord.kycStatus === "NOT_STARTED") {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { kycStatus: "PENDING" },
+        });
+      }
+
+      return NextResponse.json({ ok: true, document: result });
     }
 
     // Developer evidence is submitted against a deal, then attached to its
@@ -105,7 +129,7 @@ export async function POST(req: NextRequest) {
       );
     }
     console.error("[upload] failed", err instanceof Error ? err.message : err);
-    return NextResponse.json({ ok: false, error: "Upload failed. Try again." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : "Upload failed. Try again." }, { status: 400 });
   }
 }
 

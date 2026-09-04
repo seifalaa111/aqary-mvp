@@ -22,6 +22,9 @@ function mode<T extends string>(name: string, allowed: readonly T[], fallback: T
 
 const DEFAULT_AUTH_SECRET = "dev-only-secret-change-me-0123456789abcdef";
 function authSecret(): string {
+  if (typeof window !== "undefined") {
+    return "";
+  }
   const value = process.env.AUTH_SECRET;
   // A known fallback is useful only for a local demo. In a production bundle it
   // would make session hashes and signed URLs forgeable, so fail closed during

@@ -133,16 +133,27 @@ export async function submitOffer(input: unknown): Promise<ActionResult<{ offerI
   }
 }
 
-/** Express interest: records confidentiality consent and unlocks the vault. */
+/** Express interest: records confidentiality consent bound to this specific listing. */
 export async function expressInterest(listingId: string): Promise<ActionResult> {
   try {
     const user = await requireRole("BUYER");
-    await prisma.consent.create({
-      data: {
+    await prisma.consent.upsert({
+      where: {
+        userId_listingId_type: {
+          userId: user.id,
+          listingId,
+          type: "BUYER_CONFIDENTIALITY",
+        },
+      },
+      create: {
         userId: user.id,
+        listingId,
         type: "BUYER_CONFIDENTIALITY",
         granted: true,
         textVersion: "buyer-confidentiality-v1",
+      },
+      update: {
+        granted: true,
       },
     });
     await audit({
@@ -151,7 +162,7 @@ export async function expressInterest(listingId: string): Promise<ActionResult> 
       action: "CONSENT_RECORDED",
       entityType: "Listing",
       entityId: listingId,
-      after: { type: "BUYER_CONFIDENTIALITY" },
+      after: { type: "BUYER_CONFIDENTIALITY", listingId },
     });
     revalidatePath(`/opportunities/${listingId}`);
     return { ok: true };
@@ -163,11 +174,78 @@ export async function expressInterest(listingId: string): Promise<ActionResult> 
 export async function hasExpressedInterest(listingId: string): Promise<boolean> {
   const user = await getSessionUser();
   if (!user) return false;
-  const consent = await prisma.consent.findFirst({
-    where: { userId: user.id, type: "BUYER_CONFIDENTIALITY", granted: true },
+  const consent = await prisma.consent.findUnique({
+    where: {
+      userId_listingId_type: {
+        userId: user.id,
+        listingId,
+        type: "BUYER_CONFIDENTIALITY",
+      },
+    },
   });
-  void listingId;
-  return Boolean(consent);
+  return Boolean(consent && consent.granted);
+}
+
+export async function deleteKycDocumentAction(documentId: string): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const doc = await prisma.document.findUniqueOrThrow({
+      where: { id: documentId },
+    });
+    if (doc.ownerId !== user.id) {
+      throw new AuthorizationError("Not your document", "NOT_OWNER");
+    }
+    if (doc.status === "APPROVED") {
+      throw new Error("Approved documents cannot be deleted. Contact support or compliance.");
+    }
+    await prisma.document.delete({ where: { id: documentId } });
+    await audit({
+      actorId: user.id,
+      actorRole: user.activeRole,
+      action: "DOCUMENT_DELETED",
+      entityType: "Document",
+      entityId: documentId,
+      before: { type: doc.type, fileName: doc.fileName },
+    });
+    revalidatePath("/buyer/verification");
+    revalidatePath("/buyer/documents");
+    return { ok: true };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function updateCapacityAction(input: {
+  availableCash: number;
+  maxInstallment: number;
+}): Promise<ActionResult> {
+  try {
+    const user = await requireRole("BUYER");
+    if (input.availableCash <= 0 || input.maxInstallment <= 0) {
+      throw new Error("Amounts must be greater than zero");
+    }
+    await prisma.buyerProfile.update({
+      where: { userId: user.id },
+      data: {
+        availableCash: input.availableCash.toString(),
+        maxInstallment: input.maxInstallment.toString(),
+      },
+    });
+    await recomputeMatchesForBuyer(user.id);
+    await audit({
+      actorId: user.id,
+      actorRole: "BUYER",
+      action: "PROFILE_UPDATED",
+      entityType: "BuyerProfile",
+      entityId: user.id,
+      after: { availableCash: input.availableCash, maxInstallment: input.maxInstallment },
+    });
+    revalidatePath("/buyer/capacity");
+    revalidatePath("/buyer/matches");
+    return { ok: true };
+  } catch (err) {
+    return fail(err);
+  }
 }
 
 export async function saveSearch(input: {

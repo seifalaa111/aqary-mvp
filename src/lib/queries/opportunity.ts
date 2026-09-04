@@ -1,10 +1,11 @@
 import "server-only";
 import { Decimal } from "decimal.js";
-import type { ContractFieldKey, ValueSource } from "@prisma/client";
+import type { ContractFieldKey, DocumentType, ValueSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { money } from "@/lib/money";
 import { FIELD_LABELS } from "@/lib/domain/fields";
 import { totalEffectiveCost, remainingTotal, buildInstallmentSchedule, type Frequency } from "@/lib/domain/calculators";
+import { DILIGENCE_TYPES } from "@/lib/domain/document-access";
 
 /**
  * Everything the opportunity page renders, assembled server-side. Buyer-facing
@@ -32,6 +33,7 @@ export async function getOpportunity(listingId: string) {
       seller: { select: { id: true, fullNameEn: true } },
       media: { orderBy: [{ isCover: "desc" }, { order: "asc" }] },
       documents: {
+        where: { type: { in: DILIGENCE_TYPES as unknown as DocumentType[] } },
         select: { id: true, type: true, fileName: true, pageCount: true, createdAt: true },
         orderBy: { createdAt: "asc" },
       },
@@ -86,8 +88,8 @@ export async function getOpportunity(listingId: string) {
   // signed off — never typed, never taken from the seller's declaration.
   const now = new Date();
   const schedule = listing.contract.installments;
-  const paidRows = schedule.filter((r) => r.dueDate <= now);
-  const upcoming = schedule.filter((r) => r.dueDate > now);
+  const paidRows = schedule.filter((r) => (r.status ? r.status === "PAID" : r.dueDate <= now));
+  const upcoming = schedule.filter((r) => (r.status ? r.status !== "PAID" : r.dueDate > now));
   const remainingSum = upcoming.reduce((a, r) => a.plus(money(r.amount.toString())), money(0));
 
   const maintenanceAndClub = money(numOf(fields, "MAINTENANCE_DEPOSIT")).plus(
@@ -189,17 +191,51 @@ export async function similarOpportunities(listingId: string, take = 3) {
   });
 }
 
-/** The corpus the deal assistant is allowed to read: this deal's documents only. */
-export async function dealCorpus(listingId: string) {
-  const pages = await prisma.documentPage.findMany({
-    where: { document: { listingId } },
-    select: {
-      documentId: true,
-      pageNumber: true,
-      textSnippet: true,
-      document: { select: { type: true, fileName: true } },
-    },
-  });
+/** The corpus the deal assistant is allowed to read: this deal's documents only. Never sensitive identity/financial docs. */
+export async function dealCorpus(listingId: string, viewer?: { id: string; roles: string[] } | null) {
+  let canViewDiligencePages = false;
+  if (viewer) {
+    if (viewer.roles.includes("ANALYST") || viewer.roles.includes("ADMIN")) {
+      canViewDiligencePages = true;
+    } else {
+      const listingOwner = await prisma.listing.findUnique({
+        where: { id: listingId },
+        select: { sellerId: true },
+      });
+      if (listingOwner && listingOwner.sellerId === viewer.id) {
+        canViewDiligencePages = true;
+      } else {
+        const consent = await prisma.consent.findUnique({
+          where: {
+            userId_listingId_type: {
+              userId: viewer.id,
+              listingId,
+              type: "BUYER_CONFIDENTIALITY",
+            },
+          },
+        });
+        canViewDiligencePages = Boolean(consent && consent.granted);
+      }
+    }
+  }
+
+  // Strictly filter out sensitive documents. Only load diligence pages if viewer has consent or is privileged.
+  const pages = canViewDiligencePages
+    ? await prisma.documentPage.findMany({
+        where: {
+          document: {
+            listingId,
+            type: { in: DILIGENCE_TYPES as unknown as DocumentType[] },
+          },
+        },
+        select: {
+          documentId: true,
+          pageNumber: true,
+          textSnippet: true,
+          document: { select: { type: true, fileName: true } },
+        },
+      })
+    : [];
 
   const listing = await prisma.listing.findUnique({
     where: { id: listingId },

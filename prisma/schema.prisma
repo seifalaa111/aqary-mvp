@@ -153,6 +153,8 @@ enum DocumentType {
   DEVELOPER_NOC
   MAINTENANCE_RECEIPT
   PROOF_OF_FUNDS
+  PROOF_OF_ADDRESS
+  EMPLOYMENT_PROOF
   OTHER
 }
 
@@ -161,8 +163,11 @@ enum DocumentStatus {
   SCANNING
   PROCESSING
   PROCESSED
-  FAILED
+  APPROVED
   REJECTED
+  NEEDS_REPLACEMENT
+  EXPIRED
+  FAILED
 }
 
 enum MediaKind {
@@ -281,6 +286,7 @@ enum InstallmentStatus {
   DUE
   UPCOMING
   OVERDUE
+  UNVERIFIED
 }
 
 enum ScheduleSource {
@@ -522,6 +528,8 @@ model BuyerProfile {
   proofOfFundsDocumentId String?
   proofOfFundsVerifiedAt DateTime?
   proofOfFundsVerifiedBy String?
+  verifiedAvailableCash  Decimal?          @db.Decimal(18, 2)
+  verifiedMaxInstallment Decimal?          @db.Decimal(18, 2)
   onboardingCompletedAt  DateTime?
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
@@ -805,6 +813,10 @@ model Document {
   redactedKey    String?
   watermarkedKey String?
   note           String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  expiresAt       DateTime?
   createdAt      DateTime       @default(now())
 
   owner      User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -848,6 +860,7 @@ model MediaAsset {
   id               String           @id @default(cuid())
   listingId        String
   kind             MediaKind
+  claimedKind      MediaKind?
   roomTag          RoomTag?
   caption          String?
   altEn            String
@@ -1060,6 +1073,7 @@ model Listing {
   offers        Offer[]
   deal          Deal?
   savedBy       SavedListing[]
+  consents      Consent[]
 
   @@index([status, publishedAt])
   @@index([sellerId])
@@ -1279,6 +1293,7 @@ model Notification {
 model Consent {
   id          String      @id @default(cuid())
   userId      String
+  listingId   String?
   type        ConsentType
   granted     Boolean
   textVersion String
@@ -1286,7 +1301,9 @@ model Consent {
   userAgent   String?
   at          DateTime    @default(now())
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing     Listing?    @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, listingId, type])
   @@index([userId, type])
 }
 

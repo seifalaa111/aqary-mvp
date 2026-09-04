@@ -11,6 +11,7 @@ import { Badge, StatusPill, VerificationScore } from "@/components/ui/badges";
 import { ProvenanceChip } from "@/components/ui/provenance";
 import { StatusTracker } from "@/components/seller/status-tracker";
 import { AskingCashEditor } from "@/components/seller/asking-cash-editor";
+import { ListingDocuments } from "@/components/seller/listing-documents";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,17 @@ export default async function SellerListingPage({
         },
       },
       media: { orderBy: [{ isCover: "desc" }, { order: "asc" }], take: 6 },
-      documents: { select: { id: true, type: true, fileName: true } },
+      documents: {
+        select: {
+          id: true,
+          type: true,
+          fileName: true,
+          status: true,
+          rejectionReason: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      },
       discrepancies: { where: { status: "OPEN" }, orderBy: { severity: "desc" } },
       offers: {
         where: { status: { in: ["PENDING", "COUNTERED", "ACCEPTED"] } },
@@ -206,6 +217,26 @@ export default async function SellerListingPage({
                 </TermSheet>
               </CardBody>
             </Card>
+          </section>
+
+          {/* ---- Documents & Verification Files ---- */}
+          <section>
+            <Eyebrow>Listing verification documents</Eyebrow>
+            <h2 className="mb-4 mt-1 font-display text-xl text-ink">
+              {isAr ? "مستندات العقد والتحقق" : "Contract & Verification Files"}
+            </h2>
+            <ListingDocuments
+              listingId={listing.id}
+              documents={listing.documents.map((d) => ({
+                id: d.id,
+                type: d.type,
+                fileName: d.fileName,
+                status: d.status,
+                rejectionReason: d.rejectionReason,
+                createdAt: d.createdAt.toISOString(),
+              }))}
+              locale={locale}
+            />
           </section>
 
           {listing.discrepancies.length > 0 ? (

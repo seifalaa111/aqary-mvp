@@ -738,7 +738,9 @@
     "DEVELOPER_NOC": "موافقة المطوّر",
     "MAINTENANCE_RECEIPT": "إيصال صيانة",
     "PROOF_OF_FUNDS": "إثبات قدرة مالية",
-    "OTHER": "أخرى"
+    "OTHER": "أخرى",
+    "PROOF_OF_ADDRESS": "إثبات العنوان",
+    "EMPLOYMENT_PROOF": "إثبات العمل أو الدخل"
   },
   "milestone": {
     "OFFER_ACCEPTED": "قبول العرض",
@@ -945,5 +947,85 @@
     "Sea": "على البحر",
     "Lagoon": "على البحيرة",
     "Internal": "داخلية"
+  },
+  "documentStatus": {
+    "UPLOADED": "تم الرفع",
+    "SCANNING": "جارٍ الفحص",
+    "PROCESSING": "جارٍ المعالجة",
+    "PROCESSED": "تمت المعالجة",
+    "APPROVED": "معتمد",
+    "REJECTED": "مرفوض",
+    "NEEDS_REPLACEMENT": "مطلوب استبداله",
+    "EXPIRED": "منتهي الصلاحية",
+    "FAILED": "فشل التحليل"
+  },
+  "installmentStatus": {
+    "PAID": "مدفوع",
+    "DUE": "مستحق",
+    "UPCOMING": "قادم",
+    "OVERDUE": "متأخر",
+    "UNVERIFIED": "غير موثق"
+  },
+  "buyerNav": {
+    "overview": "نظرة عامة",
+    "verification": "التوثيق والهوية",
+    "capacity": "القدرة المالية",
+    "matches": "الفرص المطابقة",
+    "offers": "عروضي",
+    "saved": "المحفوظات",
+    "deals": "الصفقات",
+    "documents": "المستندات",
+    "settings": "الإعدادات"
+  },
+  "kycState": {
+    "notStarted": "لم يبدأ",
+    "pending": "قيد المراجعة",
+    "verified": "موثق",
+    "rejected": "مرفوض",
+    "needsReplacement": "مطلوب استبداله",
+    "expired": "منتهي الصلاحية",
+    "uploaded": "تم الرفع",
+    "missing": "مفقود",
+    "approved": "معتمد",
+    "rejectionReason": "سبب الرفض",
+    "uploadDocument": "رفع مستند",
+    "replaceDocument": "استبدال المستند",
+    "deleteDocument": "حذف"
+  },
+  "buyerOverview": {
+    "title": "مركز المشتري",
+    "sub": "إدارة توثيق هويتك، قدرتك الشرائية، والفرص النشطة في السوق.",
+    "tierStatus": "مستوى المشتري",
+    "kycStatus": "حالة التحقق من الهوية",
+    "verifiedCash": "السيولة الموثقة",
+    "declaredCash": "السيولة المصرح بها",
+    "verifiedInstallment": "القسط الموثق",
+    "declaredInstallment": "القسط المصرح به",
+    "actionNeeded": "إجراء مطلوب",
+    "completeVerification": "أكمل التوثيق لتتمكن من تقديم عروض ملزمة",
+    "uploadPof": "ارفع إثبات الملاءة المالية للحصول على أولوية العروض",
+    "viewOpportunities": "تصفح الفرص المتاحة",
+    "viewMatches": "عرض الوحدات المطابقة",
+    "viewOffers": "عرض العروض النشطة"
+  },
+  "capacity": {
+    "title": "القدرة المالية والقوة الشرائية",
+    "sub": "حجم السيولة النقدية المتاحة لديك والحد الأقصى للقسط الذي يمكنك الالتزام به.",
+    "declared": "البيانات المصرح بها",
+    "verified": "القدرة الموثقة",
+    "verifiedNotice": "تم توثيقها من قِبل محللي الامتثال استناداً إلى كشوف الحسابات وإثباتات الملاءة.",
+    "updateCapacity": "تحديث القدرة المصرح بها",
+    "cashAmount": "السيولة المتاحة (جنيه)",
+    "installmentAmount": "الحد الأقصى للقسط (جنيه)",
+    "saveChanges": "حفظ التغييرات",
+    "savedSuccess": "تم تحديث القدرة المالية بنجاح",
+    "maxAffordablePrice": "النطاق الشرائي التقديري"
+  },
+  "buyerDocuments": {
+    "title": "خزينة مستنداتي",
+    "sub": "مستودع آمن لهويتك الشخصية، إثبات الإقامة، والمستندات المالية.",
+    "uploadNew": "رفع مستند جديد",
+    "noDocuments": "لم يتم رفع أي مستندات حتى الآن.",
+    "selectType": "اختر نوع المستند"
   }
 }

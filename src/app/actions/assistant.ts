@@ -37,7 +37,7 @@ export async function askAboutDeal(input: {
     user && (user.id === listing.sellerId || user.roles.includes("ANALYST") || user.roles.includes("ADMIN"));
   if (!publiclyVisible && !privileged) return { ok: false, error: "Not available" };
 
-  const corpus = await dealCorpus(input.listingId);
+  const corpus = await dealCorpus(input.listingId, user);
   const answer = await ai().answerDealQuestion({
     listingId: input.listingId,
     question,

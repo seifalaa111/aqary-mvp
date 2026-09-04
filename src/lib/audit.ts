@@ -54,6 +54,8 @@ export type AuditAction =
   | "DEAL_CANCELLED"
   | "POLICY_UPDATED"
   | "KYC_REVIEWED"
+  | "DOCUMENT_DELETED"
+  | "PROFILE_UPDATED"
   | "ACCESS_DENIED";
 
 export interface AuditInput {

@@ -17,8 +17,22 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
     orderBy: { createdAt: "desc" },
     take: 100,
     include: {
-      buyerProfile: { select: { tier: true, availableCash: true, maxInstallment: true, readiness: true, proofOfFundsVerifiedAt: true } },
+      buyerProfile: {
+        select: {
+          tier: true,
+          availableCash: true,
+          maxInstallment: true,
+          verifiedAvailableCash: true,
+          verifiedMaxInstallment: true,
+          readiness: true,
+          proofOfFundsVerifiedAt: true,
+        },
+      },
       sellerProfile: { select: { relationshipToContract: true } },
+      documents: {
+        select: { id: true, type: true, fileName: true, status: true, rejectionReason: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+      },
       _count: { select: { listings: true, buyerOffers: true } },
     },
   });
@@ -42,10 +56,20 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
           tier: u.buyerProfile?.tier ?? null,
           availableCash: u.buyerProfile?.availableCash?.toString() ?? null,
           maxInstallment: u.buyerProfile?.maxInstallment?.toString() ?? null,
+          verifiedAvailableCash: u.buyerProfile?.verifiedAvailableCash?.toString() ?? null,
+          verifiedMaxInstallment: u.buyerProfile?.verifiedMaxInstallment?.toString() ?? null,
           readiness: u.buyerProfile?.readiness ?? null,
           proofOfFunds: Boolean(u.buyerProfile?.proofOfFundsVerifiedAt),
           listingCount: u._count.listings,
           offerCount: u._count.buyerOffers,
+          documents: u.documents.map((d) => ({
+            id: d.id,
+            type: d.type,
+            fileName: d.fileName,
+            status: d.status,
+            rejectionReason: d.rejectionReason,
+            createdAt: d.createdAt.toISOString(),
+          })),
         }))}
       />
     </>

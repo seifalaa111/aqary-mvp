@@ -31,9 +31,21 @@ export function ScheduleTable({
 }) {
   const t = useTranslations("opportunity");
   const tk = useTranslations("installmentKind");
+  const ts = useTranslations("installmentStatus");
   const [expanded, setExpanded] = useState(false);
   const now = Date.now();
   const kindLabel = (kind: string) => (tk.has(kind) ? tk(kind) : kind.replace(/_/g, " ").toLowerCase());
+  const statusLabel = (status: string, dueDate: string) => {
+    if (status && ts.has(status)) return ts(status);
+    return new Date(dueDate).getTime() <= now ? t("paid") : t("upcoming");
+  };
+  const statusTone = (status: string, dueDate: string): "verified" | "flagged" | "pending" | "neutral" => {
+    if (status === "PAID") return "verified";
+    if (status === "OVERDUE" || status === "UNVERIFIED") return "flagged";
+    if (status === "DUE") return "pending";
+    if (status === "UPCOMING") return "neutral";
+    return new Date(dueDate).getTime() <= now ? "verified" : "neutral";
+  };
   const visible = expanded ? rows : rows.slice(0, 12);
 
   if (rows.length === 0) return null;
@@ -46,7 +58,7 @@ export function ScheduleTable({
       r.dueDate.slice(0, 10),
       r.amount,
       r.runningBalance,
-      new Date(r.dueDate).getTime() <= now ? "PAID" : "UPCOMING",
+      r.status || (new Date(r.dueDate).getTime() <= now ? "PAID" : "UPCOMING"),
     ]);
     const csv = [header, ...lines].map((l) => l.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -86,9 +98,18 @@ export function ScheduleTable({
               </thead>
               <tbody>
                 {visible.map((r) => {
-                  const paid = new Date(r.dueDate).getTime() <= now;
+                  const tone = statusTone(r.status, r.dueDate);
+                  const isPaid = tone === "verified";
+                  const isFlagged = tone === "flagged";
                   return (
-                    <tr key={r.sequence} className={cn("rule-b", paid && "bg-verified-soft/30")}>
+                    <tr
+                      key={r.sequence}
+                      className={cn(
+                        "rule-b",
+                        isPaid && "bg-verified-soft/30",
+                        isFlagged && "bg-flagged-soft/20",
+                      )}
+                    >
                       <td className="money p-3 text-ink-50">{r.sequence}</td>
                       <td className="money p-3 text-ink">{formatDate(r.dueDate, locale)}</td>
                       <td className="p-3 text-xs text-ink-70">
@@ -107,8 +128,8 @@ export function ScheduleTable({
                         {egp(r.runningBalance, { style: "bare", decimals: 0 })}
                       </td>
                       <td className="p-3 text-end">
-                        <Badge tone={paid ? "verified" : "neutral"}>
-                          {paid ? t("paid") : t("upcoming")}
+                        <Badge tone={tone}>
+                          {statusLabel(r.status, r.dueDate)}
                         </Badge>
                       </td>
                     </tr>

@@ -23,3 +23,6 @@ public/property/
 test-results/
 playwright-report/
 coverage/
+
+# Local spec / prompt notes
+*.txt

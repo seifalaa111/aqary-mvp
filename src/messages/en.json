@@ -738,7 +738,9 @@
     "DEVELOPER_NOC": "Developer NOC",
     "MAINTENANCE_RECEIPT": "Maintenance receipt",
     "PROOF_OF_FUNDS": "Proof of funds",
-    "OTHER": "Other"
+    "OTHER": "Other",
+    "PROOF_OF_ADDRESS": "Proof of address",
+    "EMPLOYMENT_PROOF": "Employment proof"
   },
   "milestone": {
     "OFFER_ACCEPTED": "Offer accepted",
@@ -945,5 +947,85 @@
     "Sea": "Sea",
     "Lagoon": "Lagoon",
     "Internal": "Internal"
+  },
+  "documentStatus": {
+    "UPLOADED": "Uploaded",
+    "SCANNING": "Scanning",
+    "PROCESSING": "Processing",
+    "PROCESSED": "Processed",
+    "APPROVED": "Approved",
+    "REJECTED": "Rejected",
+    "NEEDS_REPLACEMENT": "Needs replacement",
+    "EXPIRED": "Expired",
+    "FAILED": "Failed"
+  },
+  "installmentStatus": {
+    "PAID": "Paid",
+    "DUE": "Due",
+    "UPCOMING": "Upcoming",
+    "OVERDUE": "Overdue",
+    "UNVERIFIED": "Unverified"
+  },
+  "buyerNav": {
+    "overview": "Overview",
+    "verification": "Verification & KYC",
+    "capacity": "Financial Capacity",
+    "matches": "Matches",
+    "offers": "My Offers",
+    "saved": "Saved",
+    "deals": "Deals",
+    "documents": "Documents",
+    "settings": "Settings"
+  },
+  "kycState": {
+    "notStarted": "Not Started",
+    "pending": "Under Review",
+    "verified": "Verified",
+    "rejected": "Rejected",
+    "needsReplacement": "Needs Replacement",
+    "expired": "Expired",
+    "uploaded": "Uploaded",
+    "missing": "Missing",
+    "approved": "Approved",
+    "rejectionReason": "Rejection Reason",
+    "uploadDocument": "Upload Document",
+    "replaceDocument": "Replace Document",
+    "deleteDocument": "Delete"
+  },
+  "buyerOverview": {
+    "title": "Buyer Center",
+    "sub": "Manage your identity verification, purchasing power, and active marketplace opportunities.",
+    "tierStatus": "Buyer Tier",
+    "kycStatus": "KYC Status",
+    "verifiedCash": "Verified Cash",
+    "declaredCash": "Declared Cash",
+    "verifiedInstallment": "Verified Installment",
+    "declaredInstallment": "Declared Installment",
+    "actionNeeded": "Action Needed",
+    "completeVerification": "Complete Verification to make binding offers",
+    "uploadPof": "Upload Proof of Funds to unlock Priority status",
+    "viewOpportunities": "Browse Opportunities",
+    "viewMatches": "View Matched Listings",
+    "viewOffers": "View Active Offers"
+  },
+  "capacity": {
+    "title": "Financial Capacity & Affordability",
+    "sub": "How much cash you have available and the maximum installment you can carry.",
+    "declared": "Declared Profile",
+    "verified": "Verified Capacity",
+    "verifiedNotice": "Verified by compliance analysts from your bank statements and proof of funds.",
+    "updateCapacity": "Update Declared Capacity",
+    "cashAmount": "Available Cash (EGP)",
+    "installmentAmount": "Maximum Installment (EGP)",
+    "saveChanges": "Save Changes",
+    "savedSuccess": "Financial capacity updated successfully",
+    "maxAffordablePrice": "Estimated Purchasing Range"
+  },
+  "buyerDocuments": {
+    "title": "My Documents Vault",
+    "sub": "Secure repository for your personal identity, residency, and financial evidence.",
+    "uploadNew": "Upload New Document",
+    "noDocuments": "No documents uploaded yet.",
+    "selectType": "Select Document Type"
   }
 }

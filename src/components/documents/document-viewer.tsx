@@ -28,6 +28,7 @@ export function DocumentViewer({
   highlight,
   onPageChange,
   compact = false,
+  pdfUrl,
 }: {
   pages: ViewerPage[];
   initialPage?: number;
@@ -35,6 +36,7 @@ export function DocumentViewer({
   highlight?: Highlight | null;
   onPageChange?: (page: number) => void;
   compact?: boolean;
+  pdfUrl?: string;
 }) {
   const [page, setPage] = useState(() => clamp(initialPage, 1, pages.length || 1));
   const [zoom, setZoom] = useState(1);
@@ -51,6 +53,47 @@ export function DocumentViewer({
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [page, onPageChange]);
 
+  const go = (next: number) => setPage(clamp(next, 1, pages.length));
+
+  if (pdfUrl) {
+    return (
+      <div className="flex flex-col gap-3">
+        <div
+          className={cn(
+            "relative overflow-hidden rounded-lg border border-rule bg-paper-sunken shadow-e1",
+            compact ? "h-[65vh]" : "h-[78vh]",
+          )}
+        >
+          <iframe
+            src={`${pdfUrl}#page=${page}`}
+            className="size-full border-0"
+            title="Authentic Document PDF"
+          />
+        </div>
+        {pages.length > 1 ? (
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+            {pages.map((p) => (
+              <button
+                key={p.pageNumber}
+                type="button"
+                onClick={() => go(p.pageNumber)}
+                aria-current={p.pageNumber === page ? "page" : undefined}
+                className={cn(
+                  "money size-8 shrink-0 rounded-sm border text-2xs transition-colors",
+                  p.pageNumber === page
+                    ? "border-ink bg-ink text-ink-text"
+                    : "border-rule-strong text-ink-50 hover:border-ink-50",
+                )}
+              >
+                {p.pageNumber}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   const current = pages.find((p) => p.pageNumber === page) ?? pages[0];
   if (!current) {
     return (
@@ -59,8 +102,6 @@ export function DocumentViewer({
       </div>
     );
   }
-
-  const go = (next: number) => setPage(clamp(next, 1, pages.length));
 
   return (
     <div className="flex flex-col gap-3">
