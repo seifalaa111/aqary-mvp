@@ -1,209 +1,156 @@
-
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { prisma } from "@/lib/db";
 import { config } from "@/lib/config";
 import { CARD_SELECT } from "@/lib/queries/marketplace";
-import { cancellationComparison } from "@/lib/domain/calculators";
+import { buyerPlatformFee, cancellationComparison } from "@/lib/domain/calculators";
 import { formatMoney } from "@/lib/money";
 import { toCardData } from "@/components/marketplace/to-card-data";
 import { OpportunityCard } from "@/components/marketplace/opportunity-card";
-import { CountUp } from "@/components/marketing/count-up";
-import { HowItWorksTabs } from "@/components/marketing/how-it-works-tabs";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
-import { VerificationPipeline } from "@/components/marketing/verification-pipeline";
-import { HeroTermSheet } from "@/components/marketing/hero-term-sheet";
-import { EmptyState } from "@/components/ui/primitives";
+import { VerificationPanel } from "@/components/marketing/verification-panel";
+import { EmptyState, buttonClass } from "@/components/ui/primitives";
+import { Section, SectionHead, StatStrip, Figure, LineItem } from "@/components/ui/section";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * The public landing page.
+ *
+ * Sequence: what this is → proof it is real → which side you are on → the
+ * economics → how the figures are verified → what it costs → the ask.
+ * Each section uses a different composition on purpose; the previous page
+ * repeated one editorial slab eight times.
+ */
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "home" });
+  const tn = await getTranslations({ locale, namespace: "nav" });
   const isAr = locale === "ar";
+  const feePct = config.PLATFORM_FEE_BPS / 100;
 
   // Live from the database — if a listing is unpublished, it leaves this grid.
-  const [preview, stats] = await Promise.all([
+  const [preview, liveCount, stats] = await Promise.all([
     prisma.listing.findMany({
       where: { status: { in: ["LISTED", "UNDER_OFFER"] }, isPrivate: false },
       select: CARD_SELECT,
       orderBy: [{ discountPctBps: "desc" }],
       take: 3,
     }),
+    prisma.listing.count({ where: { status: { in: ["LISTED", "UNDER_OFFER"] }, isPrivate: false } }),
     marketStats(),
   ]);
 
+  // The brief's worked example. Explicitly illustrative wherever it appears.
+  const EXAMPLE_TOTAL = "10000000";
+  const EXAMPLE_PAID = "2000000";
   const comparison = cancellationComparison({
-    totalContractPrice: "10000000",
-    amountPaid: "2000000",
+    totalContractPrice: EXAMPLE_TOTAL,
+    amountPaid: EXAMPLE_PAID,
     penaltyPctBps: 1500,
-    cashViaAqary: "2000000",
+    cashViaAqary: EXAMPLE_PAID,
     refundWaitMonths: 36,
   });
 
+  const bare = (v: Parameters<typeof formatMoney>[0]) =>
+    formatMoney(v, { style: "bare", locale: isAr ? "ar" : "en" });
+
   return (
     <>
-      {/* ================= HERO ================= */}
-      <section className="relative overflow-hidden border-b border-rule">
-        <div className="mx-auto grid max-w-[1400px] gap-12 px-5 pb-16 pt-14 md:px-8 md:pb-24 md:pt-20 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
-          <div className="max-w-2xl">
-            <p className="eyebrow mb-6">{t("eyebrow")}</p>
-            <h1 className="display-hero text-ink">
-              {t("h1a")} <em className="font-display italic text-brass">{t("h1b")}</em>
-              <br />
-              {t("h1c")}
-              <br />
-              <span className="text-ink-50">{t("h1d")}</span>
-            </h1>
-            <p className="mt-7 max-w-xl text-md leading-relaxed text-ink-70">{t("sub")}</p>
+      {/* ================= 1. HERO ================= */}
+      <section className="border-b border-rule bg-paper">
+        <div className="shell grid gap-10 pb-12 pt-10 md:pb-16 md:pt-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-14">
+          <div>
+            <p className="eyebrow mb-4">{t("eyebrow")}</p>
+            <h1 className="display-hero max-w-xl text-ink">{t("heroTitle")}</h1>
+            <p className="mt-4 max-w-lg text-md leading-relaxed text-ink-70">{t("heroSub")}</p>
 
-            <div className="mt-9 grid gap-3 sm:grid-cols-2">
-              <PathCard
-                href="/signup?role=seller"
-                title={t("ctaSeller")}
-                sub={t("ctaSellerSub")}
-                tone="ink"
-              />
-              <PathCard
-                href="/signup?role=buyer"
-                title={t("ctaBuyer")}
-                sub={t("ctaBuyerSub")}
-                tone="paper"
-              />
-            </div>
-          </div>
-
-          {/* The product's own term sheet, as the hero visual. */}
-          <HeroTermSheet locale={locale} comparison={comparison} />
-        </div>
-      </section>
-
-      {/* ================= CANCELLATION VS AQARY ================= */}
-      <section className="border-b border-rule bg-paper-sunken/60">
-        <div className="mx-auto max-w-[1400px] px-5 py-16 md:px-8 md:py-24">
-          <div className="max-w-3xl">
-            <h2 className="display-section text-ink">
-              {t("compareTitle")}{" "}
-              <em className="font-display italic text-brass">{t("compareTitleEm")}</em>
-            </h2>
-            <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-50">{t("compareSub")}</p>
-          </div>
-
-          <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            {/* Money lost, drawn to scale. */}
-            <div className="rounded-lg border border-rule bg-paper-raised p-6 md:p-8">
-              <p className="eyebrow mb-1">{t("compareCancelTitle")}</p>
-              <p className="money mt-5 text-money-xl font-semibold text-flagged">
-                {formatMoney(comparison.refundIfCancelled, { style: "bare", locale: isAr ? "ar" : "en" })}
-                <span className="ms-2 text-lg font-normal text-ink-50">EGP</span>
-              </p>
-              <p className="mt-1 text-sm text-ink-50">
-                {t("compareCancelRefund")} — {t("compareCancelWait")}
-              </p>
-
-              <div className="mt-7" aria-hidden>
-                <div className="flex h-9 w-full overflow-hidden rounded-xs border border-rule">
-                  <div
-                    className="flex items-center justify-center bg-flagged/85 text-2xs font-medium text-white"
-                    style={{ inlineSize: "75%" }}
-                  >
-                    −{formatMoney(comparison.penaltyAmount, { style: "compact" })}
-                  </div>
-                  <div className="flex items-center justify-center bg-paper-sunken text-2xs text-ink-70" style={{ inlineSize: "25%" }}>
-                    {formatMoney(comparison.refundIfCancelled, { style: "compact" })}
-                  </div>
-                </div>
-                <div className="mt-2 flex justify-between font-mono text-2xs uppercase tracking-wider text-ink-50">
-                  <span>{t("compareCancelPenalty")}</span>
-                  <span>{t("compareCancelRefund")}</span>
-                </div>
-              </div>
-
-              <p className="mt-6 text-sm text-ink-70">{t("compareCancelLoss")}</p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="/signup?role=seller" className={buttonClass("inkPrimary", "lg")}>
+                {t("heroCtaPrimary")} <span aria-hidden className="arrow-forward">→</span>
+              </Link>
+              <Link href="/opportunities" className={buttonClass("secondary", "lg")}>
+                {t("heroCtaSecondary")} <span aria-hidden className="arrow-forward">→</span>
+              </Link>
             </div>
 
-            <div className="rounded-lg border border-verified/30 bg-verified-soft p-6 md:p-8">
-              <p className="eyebrow mb-1 text-verified">{t("compareAqaryTitle")}</p>
-              <p className="money mt-5 text-money-xl font-semibold text-verified">
-                {formatMoney(comparison.cashViaAqary, { style: "bare", locale: isAr ? "ar" : "en" })}
-                <span className="ms-2 text-lg font-normal text-verified/70">EGP</span>
+            <ul className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-rule pt-5">
+              {[t("trust1"), t("trust2"), t("trust3")].map((line, i) => (
+                <li key={line} className="flex items-center gap-2 text-xs text-ink-70">
+                  {i > 0 ? <span className="text-ink-30" aria-hidden>·</span> : null}
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* The seller's own position, as the hero visual — the product's
+              artefact rather than its argument. The cancellation comparison is
+              made once, in the economics section, and not pre-empted here. */}
+          <div className="rounded-lg border border-rule bg-paper-raised shadow-e2">
+            <div className="flex items-baseline justify-between border-b border-rule px-5 py-3">
+              <p className="eyebrow">{t("heroSheetTitle")}</p>
+              <p className="font-mono text-2xs uppercase tracking-wider text-ink-30">
+                {t("illustrative")}
               </p>
-              <p className="mt-1 text-sm text-ink-70">{t("compareAqaryCash")}</p>
+            </div>
 
-              <div className="mt-7" aria-hidden>
-                <div className="flex h-9 w-full overflow-hidden rounded-xs border border-verified/30">
-                  <div
-                    className="flex items-center justify-center bg-verified text-2xs font-medium text-white"
-                    style={{ inlineSize: "100%" }}
-                  >
-                    {formatMoney(comparison.cashViaAqary, { style: "compact" })}
-                  </div>
-                </div>
-                <div className="mt-2 flex justify-between font-mono text-2xs uppercase tracking-wider text-verified/80">
-                  <span>{t("compareAqaryFee")}: 0%</span>
-                  <span>100%</span>
-                </div>
-              </div>
-
-              <dl className="rule-t mt-6">
-                <div className="rule-b flex items-baseline justify-between py-2.5">
-                  <dt className="text-sm text-ink-70">{t("compareAqaryAdvantage")}</dt>
-                  <dd className="money text-money-sm font-semibold text-verified">
-                    +{formatMoney(comparison.advantage, { style: "bare" })} EGP
-                  </dd>
-                </div>
+            <div className="px-5 py-4">
+              <dl>
+                <LineItem label={t("heroSheetTotal")} value={bare(EXAMPLE_TOTAL)} />
+                <LineItem
+                  label={t("heroSheetPaid")}
+                  value={
+                    <span className="inline-flex items-baseline gap-2">
+                      {bare(EXAMPLE_PAID)}
+                      <span className="rounded-xs border border-verified/35 bg-verified-soft px-1 py-px font-mono text-[9px] uppercase tracking-wider text-verified">
+                        {t("verifiedMark")}
+                      </span>
+                    </span>
+                  }
+                />
+                <LineItem label={t("heroSheetSellerFee")} value={`${config.SELLER_FEE_BPS / 100}%`} />
+                <LineItem
+                  label={t("heroSheetBuyerFee", { pct: feePct })}
+                  value={bare(buyerPlatformFee(EXAMPLE_TOTAL))}
+                />
               </dl>
+
+              <div className="mt-4 rounded-md bg-verified-soft p-4">
+                <p className="eyebrow mb-1.5 text-verified">{t("heroSheetReceive")}</p>
+                <Figure value={bare(EXAMPLE_PAID)} unit="EGP" tone="verified" />
+              </div>
             </div>
+
+            <p className="border-t border-rule px-5 py-3 text-2xs leading-relaxed text-ink-50">
+              {t("heroSheetCap")}
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ================= HOW IT WORKS ================= */}
-      <section id="how-it-works" className="border-b border-rule">
-        <div className="mx-auto max-w-[1400px] px-5 py-16 md:px-8 md:py-24">
-          <p className="eyebrow mb-4">{t("howEyebrow")}</p>
-          <h2 className="display-section mb-10 max-w-2xl text-ink">{t("howTitle")}</h2>
-          <HowItWorksTabs />
-        </div>
-      </section>
-
-      {/* ================= VERIFICATION PIPELINE ================= */}
-      <section className="border-b border-rule bg-ink-surface text-ink-text">
-        <div className="mx-auto max-w-[1400px] px-5 py-16 md:px-8 md:py-24">
-          <p className="eyebrow mb-4 text-ink-text-50">{t("pipelineEyebrow")}</p>
-          <h2 className="display-section max-w-2xl text-ink-text">{t("pipelineTitle")}</h2>
-          <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-text-70">{t("pipelineSub")}</p>
-          <VerificationPipeline
-            steps={[1, 2, 3, 4, 5].map((n) => ({
-              title: t(`pipeline${n}` as "pipeline1"),
-              sub: t(`pipeline${n}Sub` as "pipeline1Sub"),
-            }))}
-          />
-        </div>
-      </section>
-
-      {/* ================= LIVE OPPORTUNITIES ================= */}
-      <section className="border-b border-rule">
-        <div className="mx-auto max-w-[1400px] px-5 py-16 md:px-8 md:py-24">
-          <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
-            <div className="max-w-2xl">
-              <p className="eyebrow mb-4">{t("liveEyebrow")}</p>
-              <h2 className="display-section text-ink">{t("liveTitle")}</h2>
-              <p className="mt-4 text-sm leading-relaxed text-ink-50">{t("liveSub")}</p>
-            </div>
-            <Link
-              href="/opportunities"
-              className="inline-flex h-11 items-center rounded-sm border border-ink px-5 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-ink-text"
-            >
-              {t("liveCta")} →
+      {/* ================= 2. MARKETPLACE PROOF ================= */}
+      <Section wide>
+        <SectionHead
+          eyebrow={t("liveEyebrow")}
+          title={t("liveTitle")}
+          body={t("liveSub")}
+          action={
+            <Link href="/opportunities" className={buttonClass("secondary", "md")}>
+              {t("liveCta")} <span aria-hidden className="arrow-forward">→</span>
             </Link>
-          </div>
+          }
+        />
+        <p className="mt-3 font-mono text-2xs uppercase tracking-wider text-ink-50">
+          {t("liveCount", { count: liveCount })}
+        </p>
 
+        <div className="mt-6">
           {preview.length === 0 ? (
             <EmptyState title={t("liveEmpty")} />
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {preview.map((l, i) => (
                 <OpportunityCard
                   key={l.id}
@@ -215,85 +162,199 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             </div>
           )}
         </div>
-      </section>
+      </Section>
 
-      {/* ================= MARKET SCALE ================= */}
-      <section className="border-b border-rule bg-paper-sunken/60">
-        <div className="mx-auto max-w-[1400px] px-5 py-16 md:px-8 md:py-24">
-          <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr]">
-            <div>
-              <h2 className="display-section text-ink">{t("marketTitle")}</h2>
-              <p className="mt-5 max-w-md text-sm leading-relaxed text-ink-70">{t("marketSub")}</p>
-              <p className="mt-6 max-w-md rounded-md border border-pending/30 bg-pending-soft px-4 py-3 text-xs leading-relaxed text-ink-70">
-                {t("marketCaveat")}
-              </p>
+      {/* ================= 3. THE TWO PATHS ================= */}
+      <Section tone="sunken">
+        <SectionHead eyebrow={t("pathsEyebrow")} title={t("pathsTitle")} />
+        <div className="mt-6 grid gap-5 md:grid-cols-2">
+          <PathCard
+            href="/signup?role=seller"
+            title={t("pathSellerTitle")}
+            body={t("pathSellerBody")}
+            cta={t("heroCtaPrimary")}
+            accent
+          />
+          <PathCard
+            href="/signup?role=buyer"
+            title={t("pathBuyerTitle")}
+            body={t("pathBuyerBody")}
+            cta={t("heroCtaSecondary")}
+          />
+        </div>
+      </Section>
+
+      {/* ================= 4. ECONOMICS ================= */}
+      <Section>
+        <SectionHead eyebrow={t("econEyebrow")} title={t("econTitle")} body={t("compareSub")} />
+
+        <div className="mt-7 grid gap-px overflow-hidden rounded-lg border border-rule bg-rule lg:grid-cols-2">
+          {/* Loss drawn to scale against the same 100% baseline on both sides. */}
+          <div className="bg-paper-raised p-5 md:p-6">
+            <p className="eyebrow mb-3">{t("compareCancelTitle")}</p>
+            <Figure value={bare(comparison.refundIfCancelled)} unit="EGP" size="xl" tone="flagged" />
+            <p className="mt-1.5 text-sm text-ink-50">
+              {t("compareCancelRefund")} — {t("compareCancelWait")}
+            </p>
+
+            <div className="mt-6" aria-hidden>
+              <div className="flex h-8 w-full overflow-hidden rounded-xs border border-rule">
+                <div
+                  className="flex items-center justify-center bg-flagged/85 text-2xs font-medium text-white"
+                  style={{ inlineSize: "75%" }}
+                >
+                  −{formatMoney(comparison.penaltyAmount, { style: "compact" })}
+                </div>
+                <div
+                  className="flex items-center justify-center bg-paper-sunken text-2xs text-ink-70"
+                  style={{ inlineSize: "25%" }}
+                >
+                  {formatMoney(comparison.refundIfCancelled, { style: "compact" })}
+                </div>
+              </div>
+              <div className="mt-2 flex justify-between font-mono text-2xs uppercase tracking-wider text-ink-50">
+                <span>{t("compareCancelPenalty")}</span>
+                <span>{t("compareCancelRefund")}</span>
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-ink-70">{t("compareCancelLoss")}</p>
+          </div>
+
+          <div className="bg-verified-soft p-5 md:p-6">
+            <p className="eyebrow mb-3 text-verified">{t("compareAqaryTitle")}</p>
+            <Figure value={bare(comparison.cashViaAqary)} unit="EGP" size="xl" tone="verified" />
+            <p className="mt-1.5 text-sm text-ink-70">{t("compareAqaryCash")}</p>
+
+            <div className="mt-6" aria-hidden>
+              <div className="flex h-8 w-full overflow-hidden rounded-xs border border-verified/30">
+                <div className="flex w-full items-center justify-center bg-verified text-2xs font-medium text-white">
+                  {formatMoney(comparison.cashViaAqary, { style: "compact" })}
+                </div>
+              </div>
+              <div className="mt-2 flex justify-between font-mono text-2xs uppercase tracking-wider text-verified/80">
+                <span>
+                  {t("compareAqaryFee")}: 0%
+                </span>
+                <span>100%</span>
+              </div>
             </div>
 
-            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-rule bg-rule">
-              <Stat value={99} suffix="%" label={t("marketStat1")} />
-              <Stat value={0.3} suffix="%" decimals={1} label={t("marketStat2")} />
-              <Stat value={500} suffix="k" label={t("marketStat3")} />
-              <Stat value={3} prefix="EGP " suffix="tn" label={t("marketStat4")} />
-            </dl>
+            <div className="mt-4 flex items-baseline justify-between gap-4 border-t border-verified/25 pt-3">
+              <span className="text-sm text-ink-70">{t("compareAqaryAdvantage")}</span>
+              <span className="money text-money-sm font-semibold text-verified">
+                +{bare(comparison.advantage)} EGP
+              </span>
+            </div>
           </div>
         </div>
-      </section>
 
-      {/* ================= FEES ================= */}
-      <section className="border-b border-rule">
-        <div className="mx-auto max-w-[1400px] px-5 py-16 md:px-8 md:py-24">
-          <p className="eyebrow mb-4">{t("feeEyebrow")}</p>
-          <h2 className="display-section mb-12 max-w-3xl text-ink">{t("feeTitle")}</h2>
+        <p className="mt-3 text-2xs leading-relaxed text-ink-50">{t("econIllustrative")}</p>
+      </Section>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-lg border border-rule bg-paper-raised p-8">
-              <p className="eyebrow mb-4">{t("feeSellerLabel")}</p>
-              <p className="money text-[5rem] font-semibold leading-none tracking-tighter text-ink">0%</p>
-              <p className="mt-6 max-w-sm font-display text-lg italic leading-snug text-ink-70">
-                “{t("feeSellerNote")}”
-              </p>
-            </div>
-            <div className="rounded-lg border border-brass/35 bg-brass-soft p-8">
-              <p className="eyebrow mb-4 text-brass">{t("feeBuyerLabel")}</p>
-              <p className="money text-[5rem] font-semibold leading-none tracking-tighter text-brass">
-                {config.PLATFORM_FEE_BPS / 100}%
-              </p>
-              <p className="mt-6 max-w-sm text-sm leading-relaxed text-ink-70">{t("feeBuyerNote")}</p>
-            </div>
-          </div>
+      {/* ================= 5. VERIFICATION ================= */}
+      <Section tone="ink">
+        <SectionHead
+          eyebrow={t("verifyEyebrow")}
+          title={t("verifyTitle")}
+          body={t("verifySub")}
+          onInk
+        />
+        <div className="mt-7">
+          <VerificationPanel
+            sourceLabel={t("verifySourceLabel")}
+            verifiedLabel={t("verifiedMark")}
+            illustrativeLabel={t("illustrative")}
+            rows={[
+              {
+                label: t("verifyPaidLabel"),
+                value: bare(EXAMPLE_PAID),
+                unit: "EGP",
+                source: t("verifyPaidSource"),
+              },
+              {
+                label: t("verifyInstallmentLabel"),
+                value: bare("210900"),
+                unit: t("verifyInstallmentUnit"),
+                source: t("verifyInstallmentSource"),
+              },
+              {
+                label: t("verifyRemainingLabel"),
+                value: t("verifyRemainingValue"),
+                source: t("verifyRemainingSource"),
+              },
+            ]}
+          />
         </div>
-      </section>
+        <p className="mt-3 text-2xs leading-relaxed text-ink-text-50">{t("verifySampleNote")}</p>
 
-      {/* ================= DEVELOPERS ================= */}
-      <section className="border-b border-rule">
-        <div className="mx-auto grid max-w-[1400px] gap-10 px-5 py-16 md:grid-cols-2 md:px-8 md:py-24">
-          <div>
-            <p className="eyebrow mb-4">{t("devEyebrow")}</p>
-            <h2 className="display-section text-ink">{t("devTitle")}</h2>
-            <p className="mt-5 max-w-lg text-sm leading-relaxed text-ink-70">{t("devSub")}</p>
-            <Link
-              href="/for-developers"
-              className="mt-8 inline-flex h-11 items-center rounded-sm bg-ink px-5 text-sm font-medium text-ink-text transition-colors hover:bg-ink-90"
-            >
-              {t("devCta")} →
+        <div className="mt-8">
+          <StatStrip
+            onInk
+            items={[
+              { value: stats.published, label: t("statContractsLive", { count: stats.published }) },
+              { value: stats.developers, label: t("statDevelopers", { count: stats.developers }) },
+              { value: stats.projects, label: t("statProjects", { count: stats.projects }) },
+              { value: stats.completed, label: t("statCompleted", { count: stats.completed }) },
+            ]}
+          />
+          <p className="mt-3 text-2xs leading-relaxed text-ink-text-50">{t("footerRights")}</p>
+        </div>
+      </Section>
+
+      {/* ================= 6. FEES ================= */}
+      <Section>
+        <SectionHead
+          eyebrow={t("feeEyebrow")}
+          title={t("feeTitle", { pct: feePct })}
+          action={
+            <Link href="/fees" className={buttonClass("secondary", "md")}>
+              {t("feeSeeAll")} <span aria-hidden className="arrow-forward">→</span>
             </Link>
-          </div>
-          <dl className="grid grid-cols-2 gap-px self-start overflow-hidden rounded-lg border border-rule bg-rule">
-            <Stat value={stats.developers} label={isAr ? "مطوّر في مكتبة السياسات" : "developers in the policy library"} />
-            <Stat value={stats.projects} label={isAr ? "مشروع" : "projects covered"} />
-            <Stat value={stats.published} label={isAr ? "عقد موثّق منشور" : "verified contracts live"} />
-            <Stat value={stats.completed} label={isAr ? "تنازل مكتمل" : "assignments completed"} />
-          </dl>
-        </div>
-      </section>
+          }
+        />
 
-      {/* ================= FAQ ================= */}
-      <section>
-        <div className="mx-auto max-w-[900px] px-5 py-16 md:px-8 md:py-24">
-          <h2 className="display-section mb-10 text-ink">{t("faqTitle")}</h2>
-          <FaqAccordion />
+        <div className="mt-6 grid gap-px overflow-hidden rounded-lg border border-rule bg-rule md:grid-cols-3">
+          <FeeTile label={t("feeSellerLabel")} value="0%" note={t("feeSellerNote")} />
+          <FeeTile label={t("feeBuyerLabel")} value={`${feePct}%`} note={t("feeBuyerNote")} accent />
+          <FeeTile
+            label={t("feeDeveloperLabel")}
+            value={t("feeDeveloperValue")}
+            note={t("feeDeveloperNote")}
+            small
+          />
         </div>
-      </section>
+      </Section>
+
+      {/* ================= 7. FAQ + FINAL CTA ================= */}
+      <Section bordered={false}>
+        <div className="grid gap-10 lg:grid-cols-[1fr_320px] lg:gap-14">
+          <div>
+            <SectionHead title={t("faqTitle")} />
+            <div className="mt-5">
+              <FaqAccordion feePct={feePct} />
+            </div>
+          </div>
+
+          <aside className="lg:sticky lg:top-24 lg:self-start">
+            <div className="rounded-lg border border-rule bg-paper-raised p-5">
+              <h2 className="text-lg font-semibold text-ink">{t("finalTitle")}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-ink-70">{t("finalSub")}</p>
+              <Link
+                href="/signup?role=seller"
+                className={buttonClass("inkPrimary", "md", "mt-5 w-full")}
+              >
+                {t("heroCtaPrimary")} <span aria-hidden className="arrow-forward">→</span>
+              </Link>
+              <Link
+                href="/how-it-works"
+                className={buttonClass("ghost", "md", "mt-2 w-full")}
+              >
+                {tn("howItWorks")}
+              </Link>
+            </div>
+          </aside>
+        </div>
+      </Section>
     </>
   );
 }
@@ -303,64 +364,64 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 function PathCard({
   href,
   title,
-  sub,
-  tone,
+  body,
+  cta,
+  accent = false,
 }: {
   href: string;
   title: string;
-  sub: string;
-  tone: "ink" | "paper";
+  body: string;
+  cta: string;
+  accent?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className={
-        tone === "ink"
-          ? "group flex flex-col justify-between rounded-lg bg-ink p-5 text-ink-text transition-transform duration-200 hover:-translate-y-0.5"
-          : "group flex flex-col justify-between rounded-lg border border-rule-strong bg-paper-raised p-5 transition-transform duration-200 hover:-translate-y-0.5 hover:border-ink"
-      }
+      className="group flex flex-col rounded-lg border border-rule bg-paper-raised p-5 transition-colors hover:border-ink-50 md:p-6"
     >
+      <h3 className="text-lg font-semibold text-ink">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-ink-70">{body}</p>
       <span
         className={
-          tone === "ink"
-            ? "font-display text-xl leading-snug"
-            : "font-display text-xl leading-snug text-ink"
+          accent
+            ? "mt-5 text-sm font-semibold text-brass"
+            : "mt-5 text-sm font-medium text-ink group-hover:text-brass"
         }
       >
-        {title}
-      </span>
-      <span
-        className={
-          tone === "ink"
-            ? "mt-6 font-mono text-2xs uppercase tracking-wider text-ink-text-50"
-            : "mt-6 font-mono text-2xs uppercase tracking-wider text-ink-50"
-        }
-      >
-        {sub} →
+        {cta} <span aria-hidden className="arrow-forward">→</span>
       </span>
     </Link>
   );
 }
 
-function Stat({
-  value,
+function FeeTile({
   label,
-  prefix,
-  suffix,
-  decimals,
+  value,
+  note,
+  accent = false,
+  small = false,
 }: {
-  value: number;
   label: string;
-  prefix?: string;
-  suffix?: string;
-  decimals?: number;
+  value: string;
+  note: string;
+  accent?: boolean;
+  small?: boolean;
 }) {
   return (
-    <div className="bg-paper-raised p-6 md:p-8">
-      <dd className="money text-money-lg font-semibold tracking-tight text-ink md:text-money-xl">
-        <CountUp value={value} prefix={prefix} suffix={suffix} decimals={decimals} />
-      </dd>
-      <dt className="mt-2 text-xs leading-snug text-ink-50">{label}</dt>
+    <div className={accent ? "bg-brass-soft p-5 md:p-6" : "bg-paper-raised p-5 md:p-6"}>
+      <p className={accent ? "eyebrow mb-3 text-brass" : "eyebrow mb-3"}>{label}</p>
+      <p
+        className={
+          small
+            ? "text-lg font-semibold text-ink"
+            : accent
+              ? "money figure-xl text-brass"
+              : "money figure-xl text-ink"
+        }
+      >
+        {value}
+      </p>
+      <p className="mt-3 max-w-sm text-sm leading-relaxed text-ink-70">{note}</p>
     </div>
   );
 }
@@ -369,7 +430,11 @@ async function marketStats() {
   const [developers, projects, published, completed] = await Promise.all([
     prisma.developer.count(),
     prisma.project.count(),
-    prisma.listing.count({ where: { status: { in: ["LISTED", "UNDER_OFFER"] } } }),
+    prisma.listing.count({
+      // Same predicate as `liveCount` and the marketplace grid — a private
+      // listing must not inflate the "contracts live" figure beside them.
+      where: { status: { in: ["LISTED", "UNDER_OFFER"] }, isPrivate: false },
+    }),
     prisma.deal.count({ where: { status: "COMPLETED" } }),
   ]);
   return { developers, projects, published, completed };

@@ -7,7 +7,13 @@ import { useEffect, useRef, useState } from "react";
  * fills as it enters view. The human sign-off stage is marked differently from
  * the machine stages, because that distinction is the whole product.
  */
-export function VerificationPipeline({ steps }: { steps: { title: string; sub: string }[] }) {
+export function VerificationPipeline({
+  steps,
+  humanGateLabel,
+}: {
+  steps: { title: string; sub: string }[];
+  humanGateLabel: string;
+}) {
   const ref = useRef<HTMLOListElement>(null);
   const [active, setActive] = useState(-1);
 
@@ -31,7 +37,7 @@ export function VerificationPipeline({ steps }: { steps: { title: string; sub: s
   }, [steps]);
 
   return (
-    <ol ref={ref} className="mt-14 grid gap-8 md:grid-cols-5 md:gap-4">
+    <ol ref={ref} className="mt-8 grid gap-6 md:grid-cols-5 md:gap-4">
       {steps.map((s, i) => {
         const on = i <= active;
         const isHuman = i === 3;
@@ -40,7 +46,7 @@ export function VerificationPipeline({ steps }: { steps: { title: string; sub: s
             {/* connector */}
             {i < steps.length - 1 ? (
               <span
-                className="absolute inset-inline-start-[13px] top-7 hidden h-px w-full bg-ink-rule md:block"
+                className="absolute start-[13px] top-7 hidden h-px w-full bg-ink-rule md:block"
                 aria-hidden
               >
                 <span
@@ -67,7 +73,7 @@ export function VerificationPipeline({ steps }: { steps: { title: string; sub: s
             <p className="mt-1.5 pe-3 text-xs leading-relaxed text-ink-text-50">{s.sub}</p>
             {isHuman ? (
               <span className="mt-3 inline-flex w-fit rounded-xs border border-brass/40 px-1.5 py-0.5 font-mono text-2xs uppercase tracking-wider text-brass">
-                Human gate
+                {humanGateLabel}
               </span>
             ) : null}
           </li>

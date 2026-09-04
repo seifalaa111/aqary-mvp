@@ -59,7 +59,17 @@ export async function switchActiveRole(role: Role) {
   const store = await cookies();
   const raw = store.get(SESSION_COOKIE)?.value;
   if (!raw) return;
-  await prisma.session.updateMany({ where: { token: hashToken(raw) }, data: { activeRole: role } });
+  const session = await prisma.session.findUnique({
+    where: { token: hashToken(raw) },
+    include: { user: { select: { roles: true, deletedAt: true } } },
+  });
+  // The role selector is a convenience, never an authority boundary. Reject a
+  // forged role cookie/request rather than persisting an active role the user
+  // does not actually hold.
+  if (!session || session.expiresAt < new Date() || session.user.deletedAt || !session.user.roles.includes(role)) {
+    return;
+  }
+  await prisma.session.update({ where: { id: session.id }, data: { activeRole: role } });
 }
 
 /**
@@ -76,7 +86,14 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
     include: { user: true },
   });
 
-  if (!session || session.expiresAt < new Date() || session.user.deletedAt) return null;
+  if (
+    !session ||
+    session.expiresAt < new Date() ||
+    session.user.deletedAt ||
+    !session.user.roles.includes(session.activeRole)
+  ) {
+    return null;
+  }
 
   const u = session.user;
   return {

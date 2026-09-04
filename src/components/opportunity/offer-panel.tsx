@@ -86,7 +86,7 @@ export function OfferPanel({
           href="/buyer/offers"
           className="mt-3 inline-block text-xs text-info underline underline-offset-2"
         >
-          {tb("myOffers")} →
+          {tb("myOffers")} <span className="arrow-forward inline-block">→</span>
         </Link>
       </div>
     );
@@ -106,8 +106,8 @@ export function OfferPanel({
         <Link href={`/signup?role=buyer`} className={buttonClass("primary", "lg", "w-full")}>
             {to("makeOffer")}
           </Link>
-        <p className="text-2xs text-ink-50">
-          Sign up as a buyer to unlock the document vault and make an offer on {reference}.
+        <p className="text-2xs leading-relaxed text-ink-50">
+          {to("signUpToOffer", { reference })}
         </p>
       </div>
     );

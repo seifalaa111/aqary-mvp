@@ -98,7 +98,10 @@ export async function getOpportunity(listingId: string) {
     cashToSeller: listing.askingCash?.toString() ?? 0,
     totalContractPrice: listing.totalContractPrice?.toString() ?? 0,
     developerAssignmentFee: listing.developerAssignmentFee?.toString() ?? 0,
-    maintenanceAndClubDues: 0, // dues are shown separately; they are not part of the transfer price
+    // Dues are itemised separately in the cost breakdown, but they are cash the
+    // buyer must produce at assignment, so they belong in `cashRequiredNow`.
+    // Zeroing them here made this page contradict its own cost panel.
+    maintenanceAndClubDues: maintenanceAndClub,
     remainingInstallmentsTotal: remainingSum,
     arrears: listing.contract.hasArrears ? listing.contract.arrearsAmount?.toString() ?? 0 : 0,
     currentDeveloperPrice: unit.currentDeveloperPrice?.toString() ?? undefined,

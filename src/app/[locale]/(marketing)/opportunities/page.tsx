@@ -19,7 +19,7 @@ import { Pagination } from "@/components/marketplace/pagination";
 import { CompareTable } from "@/components/marketplace/compare-table";
 import { MapView } from "@/components/marketplace/map-view";
 import { ViewSwitch } from "@/components/marketplace/view-switch";
-import { EmptyState, Button, buttonClass } from "@/components/ui/primitives";
+import { EmptyState, buttonClass } from "@/components/ui/primitives";
 
 export const dynamic = "force-dynamic";
 
@@ -123,11 +123,13 @@ export default async function MarketplacePage({
   );
 
   return (
-    <div className="mx-auto max-w-[1500px] px-5 py-8 md:px-8 md:py-12">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
+    <div className="shell-wide py-6 md:py-9">
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+        <div className="max-w-xl">
+          {/* The grid is the point of this page, not its title. */}
           <h1 className="display-section text-ink">{t("title")}</h1>
-          <p className="mt-2 text-sm text-ink-50" aria-live="polite">
+          <p className="mt-2 text-sm leading-relaxed text-ink-70">{t("subtitle")}</p>
+          <p className="mt-2 font-mono text-2xs uppercase tracking-wider text-ink-50" aria-live="polite">
             {t("resultCount", { count: result.total })}
           </p>
         </div>
@@ -152,7 +154,7 @@ export default async function MarketplacePage({
         </div>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[260px_1fr] lg:gap-8">
         <FilterRail facets={facets} />
 
         <div className="min-w-0">
@@ -186,7 +188,7 @@ export default async function MarketplacePage({
             />
           ) : (
             <>
-              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {cards.map(({ card }, i) => (
                   <OpportunityCard key={card.id} data={card} priority={i < 3} />
                 ))}

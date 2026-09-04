@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import sharp from "sharp";
-import type { DocumentType, MediaKind, RoomTag } from "@prisma/client";
+import type { DocumentType, MediaKind, Role, RoomTag } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { storage } from "@/lib/providers/storage";
@@ -90,7 +90,7 @@ export async function uploadDocument(args: {
   type: DocumentType;
   ownerId: string;
   listingId: string;
-  actorRole: "SELLER" | "BUYER" | "ANALYST";
+  actorRole: Role;
 }): Promise<UploadResult> {
   const sha256 = createHash("sha256").update(args.buffer).digest("hex");
 

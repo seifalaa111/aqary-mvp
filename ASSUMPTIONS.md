@@ -21,8 +21,20 @@ kept building rather than stalling, as instructed.
 
 `aqary_source_data.md` (the founder's own site copy) states a **2%** buyer fee.
 `AQARY_MASTER_PROMPT.md` and `Aqary_Project_Description.md` both state **1.25%**.
-I followed the master prompt: `PLATFORM_FEE_BPS = 125`. It is configuration, so
-changing it is one environment variable and every downstream figure follows.
+The original build followed the master prompt at `PLATFORM_FEE_BPS = 125`.
+
+**Resolved in Phase 1 (public product): the fee is 2%.** The Phase 1 brief
+states it directly — "The buyer success fee is 2%, NOT 1.25%" — which settles
+the conflict in favour of the site copy. `PLATFORM_FEE_BPS` is now `200` in
+`src/lib/config.ts`, `.env` and `.env.example`, and nothing anywhere reads a
+percentage literal: every public and internal surface, the FAQ answers and the
+fee page all render `config.PLATFORM_FEE_BPS / 100`.
+
+Because `discountPctBps` on a listing is a cached saving against the developer's
+price today, it depends on the fee and goes stale on an already-seeded database
+when the constant changes. `npm run reproject` re-derives it (and the other
+projected columns) in place, without minting new CUIDs — see
+`scripts/reproject-listings.ts`. A fresh `npm run setup` needs no such step.
 
 ### The design checkpoint
 
@@ -164,6 +176,34 @@ never knows which implementation it has.
 - Modelled as a milestone with an owner, a due date and required documents. There
   is no integration with any developer's systems, because none is available.
 
+### 2.8 Developer partnership contact — `PARTNERSHIPS_EMAIL`
+
+- The public `/for-developers` page's primary action, "Discuss a partnership",
+  is a `mailto:` link. There is no contact form, no CRM and no inbox behind it:
+  building one would have meant inventing backend functionality, and routing it
+  to the authenticated `/partner` workspace would have been worse, since a
+  developer without an account cannot reach that.
+- It defaults to `partnerships@aqary.example`. `.example` is IANA-reserved and
+  permanently undeliverable — deliberately, so an unconfigured deployment cannot
+  present itself as a live inbox. **Mail sent to the default address goes
+  nowhere.** Setting `PARTNERSHIPS_EMAIL` to a real address is the whole of what
+  it takes to make this action work.
+
+### 2.9 Content that lives in the database in English only
+
+- `Project.city` / `Project.area`, `Unit.view`, `MediaAsset.caption`,
+  `Valuation.method` and its driver notes, and
+  `DeveloperAssignmentPolicy.requiredDocuments` have no Arabic column.
+- Where the value is a closed set the UI translates it at the presentation layer
+  (`city`, `view`, `roomTag`, `deliveryStatus`, `installmentKind`, `exitReason`,
+  `assignmentStatus` namespaces in `src/messages`), and the gallery renders a
+  localised equivalent of the caption rather than the stored English.
+- Where the value is free prose — the valuation method, the driver notes, and a
+  developer's required-document list — it still renders in English on an Arabic
+  page. Translating it would mean either a schema change or inventing Arabic
+  wording for a developer's own legal requirements, which is not something the
+  presentation layer should fabricate. Real Arabic content belongs in the data.
+
 ---
 
 ## 3. Domain judgement calls
@@ -173,7 +213,7 @@ never knows which implementation it has.
    that figure and audits the change. A seller cannot end up asking above what
    they have provably paid even if they set a higher figure while unverified.
 
-2. **Buyer fee basis.** The 1.25% is charged on **total contract value**, per
+2. **Buyer fee basis.** The 2% is charged on **total contract value**, per
    §2.1 of the brief — not on the cash transferred. This is visible in every
    cost breakdown before an offer is made.
 

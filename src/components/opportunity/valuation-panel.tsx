@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Card, CardBody, Eyebrow, cn } from "@/components/ui/primitives";
 import { Badge } from "@/components/ui/badges";
 import { egp } from "@/lib/format";
@@ -45,6 +46,7 @@ export function ValuationPanel({
   };
 }) {
   const isAr = locale === "ar";
+  const tc = useTranslations("common");
   if (!valuation) return null;
 
   const low = Number(valuation.low);
@@ -84,7 +86,7 @@ export function ValuationPanel({
 
           {/* The band, drawn against the two prices that frame it. */}
           <div className="relative mb-10 mt-8 h-16" aria-hidden>
-            <div className="absolute inset-inline-0 top-7 h-px bg-rule" />
+            <div className="absolute inset-x-0 top-7 h-px bg-rule" />
             <div
               className="absolute top-5 h-5 rounded-xs bg-brass/25 ring-1 ring-brass/45"
               style={{ insetInlineStart: `${pos(low)}%`, width: `${pos(high) - pos(low)}%` }}
@@ -115,7 +117,15 @@ export function ValuationPanel({
             ) : null}
           </div>
 
-          <p className="mb-5 text-xs leading-relaxed text-ink-50">{valuation.method}</p>
+          {/* Engine-generated prose, stored in English only — see ASSUMPTIONS 2.9. */}
+          <p className="mb-5 text-xs leading-relaxed text-ink-50">
+            {valuation.method}
+            {isAr ? (
+              <span className="ms-2 inline-block rounded-xs border border-rule-strong px-1 py-px text-[9px] text-ink-50">
+                {tc("englishOnly")}
+              </span>
+            ) : null}
+          </p>
           {valuation.overrideReason ? (
             <p className="mb-5 rounded-md border border-info/25 bg-info-soft px-3 py-2 text-xs text-ink-70">
               Analyst override: {valuation.overrideReason}

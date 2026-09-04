@@ -1,17 +1,19 @@
 "use client";
 
 import * as Tabs from "@radix-ui/react-tabs";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/components/ui/primitives";
 
 /**
- * The two journeys, told as the same five contractual steps seen from each side.
- * Copy comes from the founder's own material (see aqary_source_data).
+ * The two journeys, told as the same five contractual steps seen from each
+ * side. Rendered as a numbered process with a rule running through it rather
+ * than five identical cards, so the sequence — and the point at which a human
+ * analyst signs off — is legible at a glance.
  */
 const JOURNEYS = {
   seller: {
-    labelEn: "I hold the contract",
-    labelAr: "أنا صاحب التعاقد",
+    /** Index of the step gated on a human analyst, if any. */
+    humanStep: 2,
     steps: [
       {
         en: ["Assess your contract", "Enter your contract details and see your position. Free, and no obligation to list."],
@@ -30,34 +32,33 @@ const JOURNEYS = {
         ar: ["نجد لك المشتري", "مطابقة مع مشترين قادرين فعلًا على إكمال الأقساط، وليس أي متصفّح."],
       },
       {
-        en: ["Contract transfer", "Guided through the developer's assignment process, in your name and with your attendance, until you receive your cash."],
-        ar: ["نقل التعاقد", "مرافقتك في إجراءات التنازل لدى المطوّر، باسمك وبحضورك، حتى استلام مبلغك."],
+        en: ["Developer assignment, then cash", "Guided through the developer's assignment process, in your name and with your attendance, until you receive your cash."],
+        ar: ["التنازل لدى المطوّر ثم استلام المبلغ", "مرافقتك في إجراءات التنازل لدى المطوّر، باسمك وبحضورك، حتى استلام مبلغك."],
       },
     ],
   },
   buyer: {
-    labelEn: "I want to take one over",
-    labelAr: "أريد استلام تعاقد",
+    humanStep: null as number | null,
     steps: [
       {
-        en: ["Tell us your budget", "The cash you have now and the installment you can carry. That is what we match on first."],
-        ar: ["حدّد ميزانيتك", "النقد المتاح لديك والقسط الذي تتحمله. هذا أساس المطابقة."],
+        en: ["Set your capacity", "The cash you have now and the installment you can carry. That is what we match on first."],
+        ar: ["حدّد قدرتك", "النقد المتاح لديك والقسط الذي تتحمله. هذا أساس المطابقة."],
       },
       {
-        en: ["See matching opportunities", "Verified contracts with complete figures — every number marked as confirmed by documents or still estimated."],
-        ar: ["اطّلع على الفرص المناسبة", "عقود موثّقة بأرقام كاملة، وكل رقم موضّح إن كان مؤكّدًا بالمستندات أم تقديريًا."],
+        en: ["Browse verified contracts", "Complete figures on every opportunity — each one marked as confirmed by documents or still pending."],
+        ar: ["تصفّح العقود الموثّقة", "أرقام كاملة على كل فرصة، وكل رقم موضّح إن كان مؤكّدًا بالمستندات أم قيد التوثيق."],
+      },
+      {
+        en: ["Review the file", "The full schedule, the documents, and the developer's assignment terms, before you commit to anything."],
+        ar: ["راجع الملف", "الجدول كاملًا والمستندات وشروط التنازل لدى المطوّر، قبل أي التزام."],
       },
       {
         en: ["Submit your offer", "A formal offer with clear terms. You can never be asked for an overprice — offers above the asking cash are rejected by the system."],
         ar: ["قدّم عرضك", "عرض رسمي بشروط واضحة. لا يمكن مطالبتك بأوفر — النظام يرفض أي عرض أعلى من المطلوب."],
       },
       {
-        en: ["Confirm the reservation", "Every step documented in a shared deal room, with a coordinator on both sides."],
-        ar: ["أكّد الحجز", "كل خطوة موثّقة في غرفة صفقة مشتركة، مع منسّق للطرفين."],
-      },
-      {
-        en: ["Receive your contract", "An official transfer approved by the developer, with the complete file in your name."],
-        ar: ["استلم تعاقدك", "نقل رسمي معتمد من المطوّر، مع ملف كامل باسمك."],
+        en: ["Transfer, then continue the installments", "An official transfer approved by the developer, with the complete file in your name and the schedule unchanged."],
+        ar: ["النقل ثم إكمال الأقساط", "نقل رسمي معتمد من المطوّر، مع ملف كامل باسمك وجدول سداد دون تغيير."],
       },
     ],
   },
@@ -65,22 +66,26 @@ const JOURNEYS = {
 
 export function HowItWorksTabs() {
   const locale = useLocale();
+  const t = useTranslations("howItWorks");
   const isAr = locale === "ar";
 
   return (
     <Tabs.Root defaultValue="seller">
-      <Tabs.List className="mb-10 inline-flex rounded-sm border border-rule-strong p-1" aria-label="Journeys">
+      <Tabs.List
+        className="mb-6 inline-flex rounded-sm border border-rule-strong bg-paper-raised p-1"
+        aria-label={t("title")}
+      >
         {(["seller", "buyer"] as const).map((key) => (
           <Tabs.Trigger
             key={key}
             value={key}
             className={cn(
-              "rounded-xs px-4 py-2 text-sm transition-colors",
+              "rounded-xs px-4 py-2 text-sm font-medium transition-colors",
               "data-[state=active]:bg-ink data-[state=active]:text-ink-text",
               "data-[state=inactive]:text-ink-50 data-[state=inactive]:hover:text-ink",
             )}
           >
-            {isAr ? JOURNEYS[key].labelAr : JOURNEYS[key].labelEn}
+            {key === "seller" ? t("sellerTab") : t("buyerTab")}
           </Tabs.Trigger>
         ))}
       </Tabs.List>
@@ -90,13 +95,30 @@ export function HowItWorksTabs() {
           <ol className="grid gap-px overflow-hidden rounded-lg border border-rule bg-rule md:grid-cols-5">
             {JOURNEYS[key].steps.map((step, i) => {
               const [title, body] = isAr ? step.ar : step.en;
+              const isHuman = JOURNEYS[key].humanStep === i;
               return (
-                <li key={title} className="flex flex-col bg-paper-raised p-5">
-                  <span className="money mb-4 font-mono text-2xs tracking-widest text-brass">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <h3 className="mb-2 font-sans text-sm font-semibold text-ink">{title}</h3>
+                <li key={title} className="relative flex flex-col bg-paper-raised p-4 md:p-5">
+                  <div className="mb-3 flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "flex size-6 shrink-0 items-center justify-center rounded-full font-mono text-2xs",
+                        isHuman
+                          ? "bg-brass text-ink"
+                          : "border border-rule-strong bg-paper text-ink-50",
+                      )}
+                    >
+                      {i + 1}
+                    </span>
+                    {/* The rule that carries the eye to the next step. */}
+                    <span className="h-px flex-1 bg-rule" aria-hidden />
+                  </div>
+                  <h3 className="mb-1.5 text-sm font-semibold text-ink">{title}</h3>
                   <p className="text-xs leading-relaxed text-ink-50">{body}</p>
+                  {isHuman ? (
+                    <span className="mt-3 inline-flex w-fit rounded-xs border border-brass/40 bg-brass-soft px-1.5 py-0.5 font-mono text-2xs uppercase tracking-wider text-brass">
+                      {t("humanGate")}
+                    </span>
+                  ) : null}
                 </li>
               );
             })}

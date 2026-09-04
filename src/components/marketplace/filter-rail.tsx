@@ -24,13 +24,14 @@ const FINISHING = ["CORE_AND_SHELL", "SEMI_FINISHED", "FULLY_FINISHED", "FINISHE
 
 export function FilterRail({ facets }: { facets: Facets }) {
   const t = useTranslations("market");
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   const { activeCount } = useUrlFilters();
 
   return (
     <>
       {/* Mobile: filters live behind a sheet so the grid owns the viewport. */}
-      <div className="lg:hidden">
+      <div className="sticky top-16 z-20 -mx-5 bg-paper/95 px-5 py-2 backdrop-blur-sm md:-mx-8 md:px-8 lg:hidden">
         <Dialog.Root open={open} onOpenChange={setOpen}>
           <Dialog.Trigger asChild>
             <Button variant="secondary" className="w-full">
@@ -42,12 +43,21 @@ export function FilterRail({ facets }: { facets: Facets }) {
           </Dialog.Trigger>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-50 bg-ink/40" />
-            <Dialog.Content className="fixed inset-inline-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-xl bg-paper p-5">
-              <Dialog.Title className="mb-4 font-display text-xl">{t("filters")}</Dialog.Title>
-              <FilterFields facets={facets} />
-              <Button className="mt-6 w-full" onClick={() => setOpen(false)}>
-                {t("apply")}
-              </Button>
+            <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] flex-col rounded-t-xl bg-paper">
+              <div className="flex items-center justify-between border-b border-rule px-5 py-3.5">
+                <Dialog.Title className="text-base font-semibold">{t("filters")}</Dialog.Title>
+                <Dialog.Close className="text-xs text-ink-50 underline underline-offset-2">
+                  {tc("close")}
+                </Dialog.Close>
+              </div>
+              <div className="flex-1 overflow-y-auto p-5">
+                <FilterFields facets={facets} />
+              </div>
+              <div className="border-t border-rule bg-paper p-4">
+                <Button className="w-full" size="lg" onClick={() => setOpen(false)}>
+                  {t("apply")}
+                </Button>
+              </div>
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
@@ -65,6 +75,7 @@ function FilterFields({ facets }: { facets: Facets }) {
   const tu = useTranslations("unitType");
   const tf = useTranslations("finishing");
   const tc = useTranslations("common");
+  const tcity = useTranslations("city");
   const locale = useLocale();
   const { get, getList, set, toggleInList, clearAll, activeCount } = useUrlFilters();
   const [pending, startTransition] = useTransition();
@@ -113,7 +124,7 @@ function FilterFields({ facets }: { facets: Facets }) {
             placeholder={formatMoney(facets.cashMin, { style: "compact" })}
             defaultValue={get("cashMin")}
             onBlur={(e) => update({ cashMin: e.currentTarget.value })}
-            aria-label="Minimum cash"
+            aria-label={t("cashMinPlaceholder")}
           />
           <Input
             type="number"
@@ -121,7 +132,7 @@ function FilterFields({ facets }: { facets: Facets }) {
             placeholder={formatMoney(facets.cashMax, { style: "compact" })}
             defaultValue={get("cashMax")}
             onBlur={(e) => update({ cashMax: e.currentTarget.value })}
-            aria-label="Maximum cash"
+            aria-label={t("cashMaxPlaceholder")}
           />
         </div>
       </Group>
@@ -130,10 +141,10 @@ function FilterFields({ facets }: { facets: Facets }) {
         <Input
           type="number"
           inputMode="numeric"
-          placeholder={`max ${formatMoney(facets.installmentMax, { style: "compact" })}`}
+          placeholder={`${t("maxInstallmentPlaceholder")} ${formatMoney(facets.installmentMax, { style: "compact" })}`}
           defaultValue={get("installmentMax")}
           onBlur={(e) => update({ installmentMax: e.currentTarget.value })}
-          aria-label="Maximum installment"
+          aria-label={t("maxInstallmentPlaceholder")}
         />
       </Group>
 
@@ -158,7 +169,7 @@ function FilterFields({ facets }: { facets: Facets }) {
           defaultValue={get("deliveryBy")}
           onChange={(e) => update({ deliveryBy: e.currentTarget.value })}
         >
-          <option value="">Any</option>
+          <option value="">{t("any")}</option>
           {Array.from(
             { length: facets.deliveryMaxYear - facets.deliveryMinYear + 1 },
             (_, i) => facets.deliveryMinYear + i,
@@ -172,7 +183,11 @@ function FilterFields({ facets }: { facets: Facets }) {
 
       <Group label={t("filterCity")}>
         <CheckList
-          options={facets.cities.map((c) => ({ value: c.value, label: c.value, count: c.count }))}
+          options={facets.cities.map((c) => ({
+            value: c.value,
+            label: tcity.has(c.value) ? tcity(c.value) : c.value,
+            count: c.count,
+          }))}
           selected={getList("cities")}
           onToggle={(v) => startTransition(() => toggleInList("cities", v))}
         />
@@ -230,7 +245,7 @@ function FilterFields({ facets }: { facets: Facets }) {
         <Input
           type="number"
           inputMode="numeric"
-          placeholder="min m²"
+          placeholder={t("buaMinPlaceholder")}
           defaultValue={get("buaMin")}
           onBlur={(e) => update({ buaMin: e.currentTarget.value })}
           aria-label={t("filterBua")}

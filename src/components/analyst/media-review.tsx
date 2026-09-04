@@ -90,7 +90,7 @@ export function MediaReview({
                   className="object-cover"
                 />
               ) : null}
-              <span className="absolute inset-inline-start-1 top-1">
+              <span className="absolute start-1 top-1">
                 <Badge
                   tone={
                     m.moderationStatus === "APPROVED"

@@ -26,6 +26,7 @@ export function DocumentVault({
   labels: { title: string; sub: string; locked: string; express: string };
 }) {
   const td = useTranslations("docType");
+  const to = useTranslations("opportunity");
   const [open, setOpen] = useState(unlocked);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -81,7 +82,7 @@ export function DocumentVault({
               </Button>
             </div>
           ) : documents.length === 0 ? (
-            <p className="text-sm text-ink-50">No documents on file for this listing yet.</p>
+            <p className="text-sm text-ink-50">{to("noDocuments")}</p>
           ) : (
             <ul className="rule-t">
               {Object.entries(grouped).map(([type, docs]) => (

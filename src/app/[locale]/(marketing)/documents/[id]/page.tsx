@@ -88,7 +88,7 @@ export default async function DocumentPage({
       <nav className="mb-5">
         {document.listing ? (
           <Link href={`/opportunities/${document.listing.id}`} className="text-xs text-ink-50 hover:text-ink">
-            ← {document.listing.reference}
+            <span className="arrow-forward inline-block">←</span> {document.listing.reference}
           </Link>
         ) : null}
       </nav>

@@ -62,10 +62,18 @@ export async function transitionListing(args: {
   if (listing.status === args.to) return listing;
   if (!canTransition(listing.status, args.to)) throw new TransitionError(listing.status, args.to);
 
-  const updated = await prisma.listing.update({
-    where: { id: args.listingId },
+  // Compare-and-set protects every caller (offers, expiry, publication and
+  // completion) from overwriting a transition that won in another request.
+  const changed = await prisma.listing.updateMany({
+    where: { id: args.listingId, status: listing.status },
     data: { status: args.to, ...args.data },
   });
+  if (changed.count !== 1) {
+    const current = await prisma.listing.findUniqueOrThrow({ where: { id: args.listingId } });
+    if (current.status === args.to) return current;
+    throw new TransitionError(current.status, args.to);
+  }
+  const updated = await prisma.listing.findUniqueOrThrow({ where: { id: args.listingId } });
 
   await audit({
     actorId: args.actorId ?? null,
@@ -110,8 +118,11 @@ export interface PublishReadiness {
  * Every precondition in §2.1. This function is the ONLY authority on whether a
  * listing may go live, and `publishListing` calls it again inside the write.
  */
-export async function checkPublishReadiness(listingId: string): Promise<PublishReadiness> {
-  const listing = await prisma.listing.findUniqueOrThrow({
+export async function checkPublishReadiness(
+  listingId: string,
+  db: typeof prisma | Prisma.TransactionClient = prisma,
+): Promise<PublishReadiness> {
+  const listing = await db.listing.findUniqueOrThrow({
     where: { id: listingId },
     include: {
       media: true,
@@ -220,8 +231,11 @@ export async function checkPublishReadiness(listingId: string): Promise<PublishR
  * Reads ONLY `verified*` columns — a field with no analyst signature stays null
  * and renders as "pending" rather than being guessed.
  */
-export async function projectVerifiedReadModel(listingId: string) {
-  const listing = await prisma.listing.findUniqueOrThrow({
+export async function projectVerifiedReadModel(
+  listingId: string,
+  db: typeof prisma | Prisma.TransactionClient = prisma,
+) {
+  const listing = await db.listing.findUniqueOrThrow({
     where: { id: listingId },
     include: {
       contract: {
@@ -300,10 +314,10 @@ export async function projectVerifiedReadModel(listingId: string) {
     nextDue = rest[0]?.dueDate ?? nextDue;
 
     // Persist the verified schedule so the buyer-facing table is real rows.
-    await prisma.installment.deleteMany({
+    await db.installment.deleteMany({
       where: { contractId: listing.contractId, source: "ANALYST_VERIFIED" },
     });
-    await prisma.installment.createMany({
+    await db.installment.createMany({
       data: rows.map((r) => ({
         contractId: listing.contractId,
         sequence: r.sequence,
@@ -330,12 +344,15 @@ export async function projectVerifiedReadModel(listingId: string) {
       developerAssignmentFee: assignFee ?? 0,
       maintenanceAndClubDues: (num("MAINTENANCE_DEPOSIT") ?? money(0)).plus(num("CLUB_FEE") ?? money(0)),
       remainingInstallmentsTotal: remainingSum,
+      // Arrears are cash the buyer settles at assignment and every display path
+      // counts them, so the stored discount is computed on them too.
+      arrears: listing.contract.hasArrears ? listing.contract.arrearsAmount?.toString() ?? 0 : 0,
       currentDeveloperPrice: devToday,
     });
     discountBps = cost.savingPctBps;
   }
 
-  return prisma.listing.update({
+  return db.listing.update({
     where: { id: listingId },
     data: {
       totalContractPrice: totalPrice?.toFixed(2) ?? null,

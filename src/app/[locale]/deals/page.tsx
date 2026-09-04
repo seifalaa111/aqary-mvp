@@ -12,11 +12,21 @@ export const dynamic = "force-dynamic";
 export default async function DealsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const user = await requireRolePage("BUYER", "SELLER", "ANALYST", "ADMIN");
+  const user = await requireRolePage("BUYER", "SELLER", "ANALYST", "ADMIN", "DEVELOPER_PARTNER");
   const isAr = locale === "ar";
+  const developerIds = user.roles.includes("DEVELOPER_PARTNER")
+    ? (await prisma.developerPartnerMembership.findMany({ where: { userId: user.id, active: true }, select: { developerId: true } })).map((m) => m.developerId)
+    : [];
 
   const deals = await prisma.deal.findMany({
-    where: { OR: [{ buyerId: user.id }, { sellerId: user.id }, { coordinatorId: user.id }] },
+    where: {
+      OR: [
+        { buyerId: user.id },
+        { sellerId: user.id },
+        { coordinatorId: user.id },
+        ...(developerIds.length ? [{ developerId: { in: developerIds } }] : []),
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: {
       milestones: { orderBy: { order: "asc" } },

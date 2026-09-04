@@ -383,42 +383,52 @@ export async function overrideValuation(args: {
  * a stale UI can never talk the server into publishing an unverified listing.
  */
 export async function approveAndPublish(args: { listingId: string; analystId: string; note?: string }) {
-  const listing = await prisma.listing.findUniqueOrThrow({ where: { id: args.listingId } });
+  const { published, sellerId, beforeStatus } = await prisma.$transaction(
+    async (tx) => {
+      const listing = await tx.listing.findUniqueOrThrow({ where: { id: args.listingId } });
+      if (listing.status !== "PENDING_REVIEW" && listing.status !== "INFO_REQUESTED") {
+        throw new VerificationError(`Listing cannot be published from ${listing.status.toLowerCase()}`);
+      }
+      // The analyst signature, readiness proof, projection, and both legal
+      // status transitions share one serializable transaction. A field changed
+      // by another reviewer forces this transaction to retry/fail rather than
+      // publishing stale evidence.
+      const signed = await tx.listing.updateMany({
+        where: { id: listing.id, status: listing.status },
+        data: { humanVerifiedBy: args.analystId, humanVerifiedAt: new Date() },
+      });
+      if (signed.count !== 1) throw new VerificationError("Listing changed while it was being approved");
+      const readiness = await checkPublishReadiness(args.listingId, tx);
+      if (!readiness.ready) throw new VerificationError("Publish preconditions not met", readiness.blockers);
+      await projectVerifiedReadModel(args.listingId, tx);
+      const verified = await tx.listing.updateMany({
+        where: { id: listing.id, status: listing.status },
+        data: { status: "VERIFIED" },
+      });
+      if (verified.count !== 1) throw new VerificationError("Listing changed while it was being verified");
+      const listed = await tx.listing.updateMany({
+        where: { id: listing.id, status: "VERIFIED" },
+        data: { status: "LISTED", publishedAt: new Date(), infoRequestItems: undefined },
+      });
+      if (listed.count !== 1) throw new VerificationError("Listing changed while it was being published");
+      return {
+        published: await tx.listing.findUniqueOrThrow({ where: { id: listing.id } }),
+        sellerId: listing.sellerId,
+        beforeStatus: listing.status,
+      };
+    },
+    { isolationLevel: "Serializable" },
+  );
 
-  // Sign off first, then re-check: the analyst signature is itself a precondition.
-  await prisma.listing.update({
-    where: { id: args.listingId },
-    data: { humanVerifiedBy: args.analystId, humanVerifiedAt: new Date() },
-  });
-
-  const readiness = await checkPublishReadiness(args.listingId);
-  if (!readiness.ready) {
-    // Roll the signature back — this file is not publishable.
-    await prisma.listing.update({
-      where: { id: args.listingId },
-      data: { humanVerifiedBy: listing.humanVerifiedBy, humanVerifiedAt: listing.humanVerifiedAt },
-    });
-    throw new VerificationError("Publish preconditions not met", readiness.blockers);
-  }
-
-  if (listing.status === "PENDING_REVIEW" || listing.status === "INFO_REQUESTED") {
-    await transitionListing({
-      listingId: args.listingId,
-      to: "VERIFIED",
-      actorId: args.analystId,
-      actorRole: "ANALYST",
-      reason: args.note,
-    });
-  }
-
-  await projectVerifiedReadModel(args.listingId);
-
-  const published = await transitionListing({
-    listingId: args.listingId,
-    to: "LISTED",
+  await audit({
     actorId: args.analystId,
     actorRole: "ANALYST",
-    data: { publishedAt: new Date(), infoRequestItems: undefined },
+    action: "LISTING_STATUS_CHANGED",
+    entityType: "Listing",
+    entityId: args.listingId,
+    before: { status: beforeStatus },
+    after: { status: "LISTED" },
+    metadata: args.note ? { reason: args.note } : undefined,
   });
 
   await audit({
@@ -434,7 +444,7 @@ export async function approveAndPublish(args: { listingId: string; analystId: st
   await recomputeMatchesForListing(args.listingId);
 
   await notify({
-    userId: listing.sellerId,
+    userId: sellerId,
     type: "LISTING_PUBLISHED",
     titleEn: "Your contract is live on the marketplace",
     titleAr: "عقدك متاح الآن في السوق",

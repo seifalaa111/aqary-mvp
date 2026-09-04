@@ -178,7 +178,7 @@ export function MoneyInput({
 }: ComponentPropsWithoutRef<"input"> & { locale?: string }) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute inset-inline-start-3 top-1/2 -translate-y-1/2 font-mono text-2xs tracking-wider text-ink-50">
+      <span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 font-mono text-2xs tracking-wider text-ink-50">
         {locale === "ar" ? "ج.م" : "EGP"}
       </span>
       <input

@@ -9,22 +9,23 @@ export async function SiteFooter({ locale }: { locale: string }) {
 
   const columns = [
     {
-      title: t("forSellers"),
+      title: t("sell"),
       links: [
         { href: "/signup?role=seller", label: t("forSellers") },
         { href: "/how-it-works#seller", label: t("howItWorks") },
       ],
     },
     {
-      title: t("forBuyers"),
+      title: t("buy"),
       links: [
         { href: "/opportunities", label: t("marketplace") },
         { href: "/signup?role=buyer", label: t("forBuyers") },
       ],
     },
     {
-      title: t("forDevelopers"),
+      title: t("learn"),
       links: [
+        { href: "/fees", label: t("fees") },
         { href: "/for-developers", label: t("forDevelopers") },
         { href: "/faq", label: t("faq") },
       ],
@@ -32,17 +33,16 @@ export async function SiteFooter({ locale }: { locale: string }) {
   ];
 
   return (
-    <footer className="mt-24 border-t border-rule bg-ink-surface text-ink-text">
-      <div className="mx-auto max-w-[1400px] px-5 py-14 md:px-8">
+    <footer className="mt-auto border-t border-rule bg-ink-surface text-ink-text">
+      <div className="shell-wide py-12">
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             <Wordmark tone="paper" className="text-xl" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-text-70">
-              {t("skipToContent") ? null : null}
-              Transaction infrastructure for installment-contract assignment (التنازل) in Egypt.
+              {th("footerTagline")}
             </p>
             <p className="mt-4 font-mono text-2xs uppercase tracking-wider text-ink-text-50">
-              0% seller · {config.PLATFORM_FEE_BPS / 100}% buyer, on completion only
+              {th("footerFeeLine", { pct: config.PLATFORM_FEE_BPS / 100 })}
             </p>
           </div>
 
@@ -65,13 +65,12 @@ export async function SiteFooter({ locale }: { locale: string }) {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-ink-rule pt-6 md:flex-row md:items-center md:justify-between">
+        <div className="mt-10 flex flex-col gap-3 border-t border-ink-rule pt-6 md:flex-row md:items-start md:justify-between">
           <p className="font-mono text-2xs uppercase tracking-wider text-ink-text-50">
             {th("footerRights")}
           </p>
           <p className="max-w-xl text-2xs leading-relaxed text-ink-text-50">
-            Wordmark is a placeholder pending a real identity. Developer names are real; every
-            assignment policy, price, contract, receipt and person in this build is synthetic.
+            {th("footerDisclaimer")}
           </p>
         </div>
       </div>

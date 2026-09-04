@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { DocumentType, MediaKind, RoomTag } from "@prisma/client";
-import { requireListingAccess, AuthorizationError } from "@/lib/auth/guard";
+import { requireDealAccess, requireListingAccess, AuthorizationError } from "@/lib/auth/guard";
+import { prisma } from "@/lib/db";
 import { ACCEPTED_MIME, MAX_UPLOAD_BYTES, uploadDocument, uploadMedia } from "@/lib/services/uploads";
 
 export const runtime = "nodejs";
@@ -26,6 +27,40 @@ export async function POST(req: NextRequest) {
     }
     if (!ACCEPTED_MIME.has(file.type)) {
       return bad("Upload a JPEG, PNG, WebP or PDF");
+    }
+
+    // Developer evidence is submitted against a deal, then attached to its
+    // listing only after both IDs have been server-side related. This preserves
+    // one document store without allowing a partner to upload into another
+    // developer's listing by swapping a form field.
+    if (target === "developer-evidence") {
+      const dealId = String(form.get("dealId") ?? "");
+      if (!dealId) return bad("dealId is required for developer evidence");
+      const access = await requireDealAccess(dealId);
+      if (access.party !== "DEVELOPER_PARTNER" && access.user.activeRole !== "ADMIN") {
+        return bad("Only the assigned developer organisation may upload evidence", 403);
+      }
+      const deal = await prisma.deal.findUniqueOrThrow({ where: { id: dealId }, select: { listingId: true } });
+      if (deal.listingId !== listingId) return bad("This deal does not belong to that listing", 403);
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const result = await uploadDocument({
+        buffer,
+        fileName: file.name,
+        mimeType: file.type,
+        type: String(form.get("type") ?? "DEVELOPER_NOC") as DocumentType,
+        ownerId: access.user.id,
+        listingId,
+        actorRole: access.user.activeRole === "ADMIN" ? "ADMIN" : "DEVELOPER_PARTNER",
+      });
+      await prisma.message.create({
+        data: {
+          dealId,
+          senderId: access.user.id,
+          attachmentDocumentId: result.id,
+          body: `Developer evidence uploaded: ${result.fileName}`,
+        },
+      });
+      return NextResponse.json({ ok: true, document: result });
     }
 
     const { user, listing } = await requireListingAccess(listingId, { as: "SELLER" });

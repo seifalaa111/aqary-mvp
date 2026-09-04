@@ -32,13 +32,14 @@ export function CostCalculator({ base, locale }: { base: CostBase; locale: strin
   const asking = new Decimal(base.cashToSeller);
   const floor = new Decimal(base.minAcceptableCash);
   const [cash, setCash] = useState(() => asking.toNumber());
-  const [includeDues, setIncludeDues] = useState(true);
 
   const result = useMemo(() => {
     const cashToSeller = new Decimal(cash);
     const platformFee = new Decimal(base.totalContractPrice).mul(base.feePct).div(100).toDecimalPlaces(2);
     const assignFee = new Decimal(base.developerAssignmentFee);
-    const dues = includeDues ? new Decimal(base.dues) : new Decimal(0);
+    // Not optional: the figure in the page header includes these, and a
+    // toggle here would let the two contradict each other.
+    const dues = new Decimal(base.dues);
     const arrears = new Decimal(base.arrears);
     const remaining = new Decimal(base.remainingInstallments);
 
@@ -49,7 +50,7 @@ export function CostCalculator({ base, locale }: { base: CostBase; locale: strin
     const savingPct = today && today.gt(0) ? saving!.div(today).mul(100).toNumber() : null;
 
     return { cashToSeller, platformFee, assignFee, dues, arrears, remaining, cashNow, total, today, saving, savingPct };
-  }, [cash, includeDues, base]);
+  }, [cash, base]);
 
   return (
     <section>
@@ -100,21 +101,8 @@ export function CostCalculator({ base, locale }: { base: CostBase; locale: strin
               value={egp(result.platformFee, { decimals: 0 })}
             />
             <Row label={t("costAssignmentFee")} value={egp(result.assignFee, { decimals: 0 })} />
-            <Row
-              label={
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={includeDues}
-                    onChange={(e) => setIncludeDues(e.target.checked)}
-                    className="size-3.5 accent-ink"
-                  />
-                  {t("costDues")}
-                </label>
-              }
-              value={egp(result.dues, { decimals: 0 })}
-              muted={!includeDues}
-            />
+            {/* Itemised, not optional — see the note in the calculation above. */}
+            <Row label={t("costDues")} value={egp(result.dues, { decimals: 0 })} />
             {result.arrears.gt(0) ? (
               <Row label={t("costArrears")} value={egp(result.arrears, { decimals: 0 })} tone="flagged" />
             ) : null}

@@ -73,7 +73,7 @@ export default async function LocaleLayout({
       <body>
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:inset-inline-start-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-ink focus:px-4 focus:py-2 focus:text-ink-text"
+          className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-ink focus:px-4 focus:py-2 focus:text-ink-text"
         >
           {locale === "ar" ? "تخطٍّ إلى المحتوى" : "Skip to content"}
         </a>

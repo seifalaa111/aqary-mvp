@@ -2,49 +2,58 @@
 
 /* ===========================================================================
    AQARY DESIGN TOKENS
-   Information-Architecture school × Modern-Tool SaaS.
+   Premium fintech × real estate × transaction infrastructure.
    Every colour, space, radius, shadow and type step in the product comes from
    here. Components never introduce raw hex — see eslint rule `no-raw-hex`.
+
+   Colour discipline (Phase 1):
+   - The ground is NEUTRAL. Nothing on a page is tinted beige, green or gold
+     for decoration. Colour is reserved for meaning.
+   - Green means verified / positive outcome. Nothing else.
+   - Gold (brass) is the single primary-action accent and appears at most twice
+     per viewport. It is never a background wash for a whole section.
+   - Red means loss or a flagged value.
    =========================================================================== */
 
 @theme {
   /* --- Ground & ink ------------------------------------------------------ */
-  /* Warm paper ground; a deep desaturated green-black institutional base.   */
-  --color-paper: oklch(0.978 0.006 85);      /* #FAF8F3 page ground          */
-  --color-paper-raised: oklch(1 0 0);         /* #FFFFFF cards               */
-  --color-paper-sunken: oklch(0.955 0.008 85);/* #F1EDE6 wells, table zebra  */
-  --color-ink: oklch(0.215 0.019 168);        /* #14211E primary text/base   */
-  --color-ink-90: oklch(0.28 0.018 168);
-  --color-ink-70: oklch(0.44 0.014 168);      /* secondary text              */
-  --color-ink-50: oklch(0.60 0.011 168);      /* tertiary text, axis labels  */
-  --color-ink-30: oklch(0.78 0.008 168);      /* disabled                    */
-  --color-rule: oklch(0.886 0.008 85);        /* hairline — the signature    */
-  --color-rule-strong: oklch(0.80 0.010 85);
+  /* Neutral near-white ground with a barely-there cool cast; a near-black    */
+  /* neutral ink so that green reads as a verification signal, not a theme.   */
+  --color-paper: oklch(0.988 0.001 250);      /* page ground                 */
+  --color-paper-raised: oklch(1 0 0);         /* cards                       */
+  --color-paper-sunken: oklch(0.968 0.002 250);/* wells, table zebra         */
+  --color-ink: oklch(0.205 0.006 250);        /* primary text / base         */
+  --color-ink-90: oklch(0.275 0.006 250);
+  --color-ink-70: oklch(0.455 0.006 250);     /* secondary text              */
+  --color-ink-50: oklch(0.605 0.006 250);     /* tertiary text, axis labels  */
+  --color-ink-30: oklch(0.775 0.005 250);     /* disabled                    */
+  --color-rule: oklch(0.910 0.003 250);       /* hairline — the signature    */
+  --color-rule-strong: oklch(0.845 0.004 250);
 
-  /* --- Accents (max 4 + semantics) --------------------------------------- */
-  --color-brass: oklch(0.665 0.107 71);       /* #B4833C primary action      */
-  --color-brass-hover: oklch(0.605 0.104 71);
-  --color-brass-soft: oklch(0.945 0.030 76);
-  --color-verdigris: oklch(0.505 0.086 172);  /* #26685C verified / positive */
-  --color-verdigris-soft: oklch(0.945 0.024 172);
+  /* --- Accents (one action accent + semantics) --------------------------- */
+  --color-brass: oklch(0.615 0.113 66);       /* primary action              */
+  --color-brass-hover: oklch(0.555 0.110 66);
+  --color-brass-soft: oklch(0.960 0.024 76);
+  --color-verdigris: oklch(0.505 0.086 172);  /* verified / positive         */
+  --color-verdigris-soft: oklch(0.955 0.020 172);
 
   /* --- Semantic verification states -------------------------------------- */
   --color-verified: oklch(0.505 0.086 172);
-  --color-verified-soft: oklch(0.945 0.024 172);
-  --color-pending: oklch(0.635 0.105 78);
-  --color-pending-soft: oklch(0.955 0.033 82);
+  --color-verified-soft: oklch(0.955 0.020 172);
+  --color-pending: oklch(0.615 0.104 78);
+  --color-pending-soft: oklch(0.963 0.028 82);
   --color-flagged: oklch(0.525 0.148 28);     /* clay red                    */
-  --color-flagged-soft: oklch(0.948 0.026 32);
+  --color-flagged-soft: oklch(0.956 0.022 32);
   --color-info: oklch(0.505 0.062 245);
-  --color-info-soft: oklch(0.949 0.018 245);
+  --color-info-soft: oklch(0.956 0.014 245);
 
-  /* --- Dark surfaces (marketing sections, analyst chrome) ----------------- */
-  --color-ink-surface: oklch(0.215 0.019 168);
-  --color-ink-surface-raised: oklch(0.263 0.021 168);
-  --color-ink-rule: oklch(0.335 0.019 168);
-  --color-ink-text: oklch(0.955 0.006 85);
-  --color-ink-text-70: oklch(0.775 0.010 168);
-  --color-ink-text-50: oklch(0.635 0.012 168);
+  /* --- Dark surfaces (footer, data panels, workspace chrome) -------------- */
+  --color-ink-surface: oklch(0.195 0.006 250);
+  --color-ink-surface-raised: oklch(0.255 0.007 250);
+  --color-ink-rule: oklch(0.325 0.007 250);
+  --color-ink-text: oklch(0.972 0.002 250);
+  --color-ink-text-70: oklch(0.775 0.005 250);
+  --color-ink-text-50: oklch(0.635 0.006 250);
 
   /* --- Type -------------------------------------------------------------- */
   --font-display: var(--font-newsreader), "Newsreader", Georgia, serif;
@@ -68,20 +77,20 @@
   --text-xl--line-height: 1.85rem;
   --text-2xl: 1.9375rem;
   --text-2xl--line-height: 2.2rem;
-  --text-3xl: 2.5rem;
-  --text-3xl--line-height: 2.7rem;
-  --text-4xl: 3.25rem;
-  --text-4xl--line-height: 3.35rem;
-  --text-5xl: 4.25rem;
-  --text-5xl--line-height: 4.25rem;
-  --text-6xl: 5.5rem;
-  --text-6xl--line-height: 5.3rem;
+  --text-3xl: 2.125rem;
+  --text-3xl--line-height: 2.4rem;
+  --text-4xl: 2.625rem;
+  --text-4xl--line-height: 2.85rem;
+  --text-5xl: 3.25rem;
+  --text-5xl--line-height: 3.4rem;
+  --text-6xl: 4rem;
+  --text-6xl--line-height: 4.05rem;
 
-  /* Money has its own scale — "cash to seller" is the hero of a card. */
+  /* Money has its own scale — the figure is the hero, not the headline. */
   --text-money-sm: 1.0625rem;
   --text-money-md: 1.5rem;
-  --text-money-lg: 2.125rem;
-  --text-money-xl: 3rem;
+  --text-money-lg: 2rem;
+  --text-money-xl: 2.75rem;
 
   /* --- Space (4px base) --------------------------------------------------- */
   --spacing: 0.25rem;
@@ -133,27 +142,26 @@
     font-family: var(--font-arabic);
   }
 
-  h1, h2, h3 {
-    font-family: var(--font-display);
-    font-weight: 400;
-    letter-spacing: -0.015em;
+  /* Functional UI is sans throughout. Serif is opt-in, via `.font-display`
+     or `.brand-serif`, and is reserved for brand moments — not for every
+     heading on every page. */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.012em;
     text-wrap: balance;
     margin: 0;
   }
 
   html[dir="rtl"] h1,
   html[dir="rtl"] h2,
-  html[dir="rtl"] h3 {
+  html[dir="rtl"] h3,
+  html[dir="rtl"] h4,
+  html[dir="rtl"] h5,
+  html[dir="rtl"] h6 {
     font-family: var(--font-arabic);
     font-weight: 600;
     letter-spacing: 0;
-  }
-
-  h4, h5, h6 {
-    font-family: var(--font-sans);
-    font-weight: 600;
-    letter-spacing: -0.005em;
-    margin: 0;
   }
 
   p { margin: 0; }
@@ -211,28 +219,88 @@
     color: var(--color-ink-50);
   }
 
+  /* Page-level headline. Sans, tight, and deliberately not enormous — the
+     largest thing on a page should be a number, not a sentence. */
   .display-hero {
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: clamp(2.5rem, 6.2vw, 5.5rem);
-    line-height: 0.98;
-    letter-spacing: -0.03em;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: clamp(1.875rem, 3.6vw, 2.875rem);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
   }
 
+  /* Section headline. One step down, and never the focal point of a section. */
   .display-section {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: clamp(1.375rem, 2.1vw, 1.75rem);
+    line-height: 1.2;
+    letter-spacing: -0.018em;
+  }
+
+  /* The one place serif is allowed on a public page: a single brand statement
+     per page, at most. Never a whole section of headings. */
+  .brand-serif {
     font-family: var(--font-display);
     font-weight: 400;
-    font-size: clamp(1.9rem, 3.6vw, 3.1rem);
-    line-height: 1.06;
-    letter-spacing: -0.022em;
+    letter-spacing: -0.02em;
   }
 
   html[dir="rtl"] .display-hero,
-  html[dir="rtl"] .display-section {
+  html[dir="rtl"] .display-section,
+  html[dir="rtl"] .brand-serif {
     font-family: var(--font-arabic);
     font-weight: 600;
     letter-spacing: 0;
-    line-height: 1.25;
+    line-height: 1.35;
+  }
+
+  /* --- Layout rhythm -----------------------------------------------------
+     One container width and two section paddings for the whole public site.
+     The old page was a stack of identical py-24 slabs; these keep sections
+     compact and let composition — not vertical air — do the separating. */
+  .shell {
+    margin-inline: auto;
+    max-inline-size: 1280px;
+    padding-inline: 1.25rem;
+  }
+  .shell-wide {
+    margin-inline: auto;
+    max-inline-size: 1440px;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 768px) {
+    .shell, .shell-wide { padding-inline: 2rem; }
+  }
+
+  .section-y { padding-block: 3rem; }
+  .section-y-tight { padding-block: 2rem; }
+  @media (min-width: 768px) {
+    .section-y { padding-block: 4.5rem; }
+    .section-y-tight { padding-block: 2.75rem; }
+  }
+
+  /* A figure that must dominate its container, at three sizes. */
+  .figure-xl {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-size: var(--text-money-xl);
+    line-height: 1.02;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+  .figure-lg {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-size: var(--text-money-lg);
+    line-height: 1.06;
+    font-weight: 600;
+    letter-spacing: -0.028em;
+  }
+  .figure-md {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-size: var(--text-money-md);
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.022em;
   }
 
   .grain::before {
@@ -303,5 +371,18 @@
   /* Keeps a Latin run (a figure, a unit, a code) from reordering inside RTL text. */
   .unicode-bidi-isolate {
     unicode-bidi: isolate;
+  }
+}
+
+@layer utilities {
+  /*
+   * A forward-affordance arrow. U+2192 is not bidi-mirrored, so a literal "→"
+   * on an RTL page points backwards — against the direction of the flow it is
+   * meant to advance. Flipping the glyph is what makes it read as "next" in
+   * both directions.
+   */
+  html[dir="rtl"] .arrow-forward {
+    display: inline-block;
+    transform: scaleX(-1);
   }
 }

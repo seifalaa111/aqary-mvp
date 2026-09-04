@@ -6,7 +6,7 @@ import { audit } from "@/lib/audit";
 import { money } from "@/lib/money";
 import { notify } from "./notifications";
 import { transitionListing } from "./listings";
-import { createDealFromOffer } from "./deals";
+import { acceptOfferToDeal } from "./deals";
 
 /**
  * Offers and counter-offers. The no-overprice invariant is enforced here on the
@@ -187,43 +187,17 @@ export async function counterOffer(args: {
 }
 
 export async function acceptOffer(args: { offerId: string; actorId: string }) {
-  await expireIfDue(args.offerId);
   const offer = await prisma.offer.findUniqueOrThrow({
     where: { id: args.offerId },
     include: { listing: true },
   });
-
-  if (offer.status !== "PENDING") {
-    throw new OfferError(`This offer is ${offer.status.toLowerCase()}`, "NOT_PENDING");
+  let result: Awaited<ReturnType<typeof acceptOfferToDeal>>;
+  try {
+    result = await acceptOfferToDeal(args);
+  } catch (err) {
+    if (err instanceof Error) throw new OfferError(err.message, "NOT_PENDING");
+    throw err;
   }
-
-  // The party who did NOT make the offer is the one who may accept it.
-  const acceptor = offer.direction === "BUYER_TO_SELLER" ? offer.sellerId : offer.buyerId;
-  if (acceptor !== args.actorId) throw new OfferError("You cannot accept this offer", "NOT_COUNTERPARTY");
-
-  const accepted = await prisma.$transaction(async (tx) => {
-    const a = await tx.offer.update({
-      where: { id: offer.id },
-      data: { status: "ACCEPTED", respondedAt: new Date() },
-    });
-    // Every other open offer on this listing is now dead.
-    await tx.offer.updateMany({
-      where: { listingId: offer.listingId, id: { not: offer.id }, status: { in: ["PENDING", "COUNTERED"] } },
-      data: { status: "DECLINED", respondedAt: new Date() },
-    });
-    return a;
-  });
-
-  await audit({
-    actorId: args.actorId,
-    actorRole: offer.direction === "BUYER_TO_SELLER" ? "SELLER" : "BUYER",
-    action: "OFFER_ACCEPTED",
-    entityType: "Offer",
-    entityId: offer.id,
-    after: { amount: offer.amount.toString(), listingId: offer.listingId },
-  });
-
-  const deal = await createDealFromOffer(accepted.id, args.actorId);
 
   await notify({
     userId: offer.direction === "BUYER_TO_SELLER" ? offer.buyerId : offer.sellerId,
@@ -232,10 +206,10 @@ export async function acceptOffer(args: { offerId: string; actorId: string }) {
     titleAr: "تم قبول عرضك",
     bodyEn: `A deal room has been opened for ${offer.listing.reference}.`,
     bodyAr: `تم فتح غرفة الصفقة لـ ${offer.listing.reference}.`,
-    linkHref: `/deals/${deal.id}`,
+    linkHref: `/deals/${result.deal.id}`,
   });
 
-  return { offer: accepted, deal };
+  return result;
 }
 
 export async function declineOffer(args: { offerId: string; actorId: string; reason?: string }) {
@@ -298,7 +272,13 @@ export async function expireIfDue(offerId: string) {
   const offer = await prisma.offer.findUnique({ where: { id: offerId } });
   if (!offer || offer.status !== "PENDING" || offer.expiresAt > new Date()) return offer;
 
-  const updated = await prisma.offer.update({ where: { id: offerId }, data: { status: "EXPIRED" } });
+  // Conditional transition loses safely to an acceptance transaction.
+  const expired = await prisma.offer.updateMany({
+    where: { id: offerId, status: "PENDING", expiresAt: { lte: new Date() } },
+    data: { status: "EXPIRED", respondedAt: new Date() },
+  });
+  if (expired.count !== 1) return prisma.offer.findUnique({ where: { id: offerId } });
+  const updated = await prisma.offer.findUniqueOrThrow({ where: { id: offerId } });
   await audit({ action: "OFFER_EXPIRED", entityType: "Offer", entityId: offerId });
   await notify({
     userId: offer.buyerId,

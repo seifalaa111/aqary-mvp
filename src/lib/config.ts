@@ -20,9 +20,21 @@ function mode<T extends string>(name: string, allowed: readonly T[], fallback: T
   return raw && allowed.includes(raw) ? raw : fallback;
 }
 
+const DEFAULT_AUTH_SECRET = "dev-only-secret-change-me-0123456789abcdef";
+function authSecret(): string {
+  const value = process.env.AUTH_SECRET;
+  // A known fallback is useful only for a local demo. In a production bundle it
+  // would make session hashes and signed URLs forgeable, so fail closed during
+  // startup instead of silently running insecurely.
+  if (process.env.NODE_ENV === "production" && (!value || value === DEFAULT_AUTH_SECRET)) {
+    throw new Error("AUTH_SECRET must be a unique, non-default value in production");
+  }
+  return value || DEFAULT_AUTH_SECRET;
+}
+
 export const config = {
-  /** Buyer success fee, in basis points. 125 bps = 1.25%. Charged only on completion. */
-  PLATFORM_FEE_BPS: int("PLATFORM_FEE_BPS", 125),
+  /** Buyer success fee, in basis points. 200 bps = 2%. Charged only on completion. */
+  PLATFORM_FEE_BPS: int("PLATFORM_FEE_BPS", 200),
   /** Seller commission. Zero, by design — see the business brief. */
   SELLER_FEE_BPS: int("SELLER_FEE_BPS", 0),
 
@@ -75,7 +87,14 @@ export const config = {
   SHOW_DEMO_BANNER: bool("SHOW_DEMO_BANNER", true),
   SURFACE_OTP_IN_DEV: bool("SURFACE_OTP_IN_DEV", true),
 
-  AUTH_SECRET: process.env.AUTH_SECRET || "dev-only-secret-change-me-0123456789abcdef",
+  /**
+   * Where the public "Discuss a partnership" action sends a developer. Defaults
+   * to the IANA-reserved `.example` TLD so an unconfigured deployment cannot
+   * pass itself off as a live inbox; set it to the real address to go live.
+   */
+  PARTNERSHIPS_EMAIL: process.env.PARTNERSHIPS_EMAIL || "partnerships@aqary.example",
+
+  AUTH_SECRET: authSecret(),
   SESSION_DAYS: int("SESSION_DAYS", 14),
 } as const;
 

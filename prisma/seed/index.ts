@@ -101,6 +101,7 @@ async function main() {
   // ---- Reference data ----------------------------------------------------
   console.log("Developers, projects and assignment policies…");
   const projectIndex: { project: ProjectSeed; projectId: string; developer: DeveloperRef }[] = [];
+  const developerRefs: DeveloperRef[] = [];
 
   for (const dev of DEVELOPERS) {
     const developer = await prisma.developer.create({
@@ -142,6 +143,7 @@ async function main() {
         dev.policy.feeType === "PERCENT" ? (dev.policy.feePercentBps ?? 0) / 100 : 0,
       minMonths: dev.policy.minMonthsElapsed ?? 12,
     };
+    developerRefs.push(ref);
 
     for (const p of dev.projects) {
       const project = await prisma.project.create({
@@ -198,7 +200,18 @@ async function main() {
     ANALYSTS.map((p, i) => createPerson(p, ["ANALYST"], passwordHash, 200 + i, {})),
   );
   const admin = await createPerson(ADMIN, ["ADMIN", "ANALYST"], passwordHash, 300, {});
-  await createPerson(PARTNER, ["DEVELOPER_PARTNER"], passwordHash, 301, {});
+  const partner = await createPerson(PARTNER, ["DEVELOPER_PARTNER"], passwordHash, 301, {});
+  // A partner role alone grants nothing. The demo desk is deliberately bound
+  // to one developer organisation so tenant-isolation behaviour is observable.
+  await prisma.developerPartnerMembership.create({
+    data: {
+      userId: partner.id,
+      // The seeded active request belongs to Tatweer Misr; binding the demo
+      // partner there makes the full developer workflow observable without
+      // weakening tenant isolation across the other eleven developers.
+      developerId: developerRefs.find((developer) => developer.nameEn === "Tatweer Misr")!.id,
+    },
+  });
 
   // One account holding both roles, to exercise the workspace switcher.
   const dual = await createPerson(
@@ -663,6 +676,7 @@ async function seedTransactions(
       dealId: deal.id,
       kind: "RESERVATION_DEPOSIT",
       actorId: buyers[0]!.id,
+      actorRole: "BUYER",
       simulate: "SUCCESS",
     });
     await handlePaymentCallback(deposit.id);
@@ -703,6 +717,7 @@ async function seedTransactions(
       dealId: deal.id,
       kind: "RESERVATION_DEPOSIT",
       actorId: buyer.id,
+      actorRole: "BUYER",
       simulate: "FAILURE",
     });
     await handlePaymentCallback(failed.id);
@@ -712,21 +727,22 @@ async function seedTransactions(
       dealId: deal.id,
       kind: "RESERVATION_DEPOSIT",
       actorId: buyer.id,
+      actorRole: "BUYER",
       simulate: "SUCCESS",
     });
     await handlePaymentCallback(retried.id);
 
     await completeMilestone({ dealId: deal.id, key: "RESERVATION_DEPOSIT", actorId: buyer.id, actorRole: "BUYER" });
-    await completeMilestone({ dealId: deal.id, key: "DEVELOPER_NOC_REQUESTED", actorId: adminId, actorRole: "ANALYST", note: "NOC issued in 19 days." });
-    await completeMilestone({ dealId: deal.id, key: "ASSIGNMENT_APPOINTMENT", actorId: adminId, actorRole: "ANALYST" });
+    await completeMilestone({ dealId: deal.id, key: "DEVELOPER_NOC_REQUESTED", actorId: adminId, actorRole: "ADMIN", note: "NOC issued in 19 days." });
+    await completeMilestone({ dealId: deal.id, key: "ASSIGNMENT_APPOINTMENT", actorId: adminId, actorRole: "ADMIN" });
     await completeMilestone({ dealId: deal.id, key: "DOCUMENTS_SIGNED", actorId: listing.sellerId, actorRole: "SELLER", note: "Both parties attended and signed in their own names." });
-    await completeMilestone({ dealId: deal.id, key: "ASSIGNMENT_REGISTERED", actorId: adminId, actorRole: "ANALYST" });
+    await completeMilestone({ dealId: deal.id, key: "ASSIGNMENT_REGISTERED", actorId: adminId, actorRole: "ADMIN" });
 
-    const release = await initiatePayment({ dealId: deal.id, kind: "SELLER_RELEASE", actorId: adminId, simulate: "SUCCESS" });
+    const release = await initiatePayment({ dealId: deal.id, kind: "SELLER_RELEASE", actorId: adminId, actorRole: "ADMIN", simulate: "SUCCESS" });
     await handlePaymentCallback(release.id);
     await completeMilestone({ dealId: deal.id, key: "CASH_RELEASED_TO_SELLER", actorId: adminId, actorRole: "ADMIN" });
 
-    const fee = await initiatePayment({ dealId: deal.id, kind: "PLATFORM_FEE", actorId: buyer.id, simulate: "SUCCESS" });
+    const fee = await initiatePayment({ dealId: deal.id, kind: "PLATFORM_FEE", actorId: buyer.id, actorRole: "BUYER", simulate: "SUCCESS" });
     await handlePaymentCallback(fee.id);
     await completeMilestone({ dealId: deal.id, key: "PLATFORM_FEE_COLLECTED", actorId: buyer.id, actorRole: "BUYER" });
 
@@ -755,7 +771,7 @@ async function wipe() {
     "extractionField", "extraction", "discrepancy", "fraudSignal",
     "valuationComparable", "valuation", "installment", "contractField",
     "listing", "contract", "unit", "projectPriceBenchmark", "project",
-    "developerAssignmentPolicy", "developer", "auditEvent", "job", "otpCode",
+    "developerPartnerMembership", "developerAssignmentPolicy", "developer", "auditEvent", "job", "otpCode",
     "session", "sellerProfile", "buyerProfile", "user",
   ] as const;
 

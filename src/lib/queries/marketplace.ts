@@ -3,7 +3,7 @@ import { Decimal } from "decimal.js";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { money } from "@/lib/money";
-import { buyerPlatformFee, totalEffectiveCost } from "@/lib/domain/calculators";
+import { totalEffectiveCost } from "@/lib/domain/calculators";
 
 /**
  * Marketplace reads. Every filter, sort and page here is a real SQL predicate —
@@ -35,6 +35,14 @@ export const CARD_SELECT = {
     select: {
       hasArrears: true,
       arrearsAmount: true,
+      // AMOUNT_PAID carries the analyst-adopted source behind the paid amount
+      // the asking cash is capped at — the card renders that rather than
+      // asserting a source. MAINTENANCE_DEPOSIT and CLUB_FEE are needed so a
+      // card computes the same cash figure as the opportunity page.
+      fields: {
+        where: { key: { in: ["AMOUNT_PAID", "MAINTENANCE_DEPOSIT", "CLUB_FEE"] as const } },
+        select: { key: true, verifiedNum: true, verifiedSource: true },
+      },
       unit: {
         select: {
           unitCode: true,
@@ -264,17 +272,41 @@ export async function queryMarketplace(args: {
   };
 }
 
-/** Cash a buyer must produce at assignment: seller cash + Aqary fee + developer fee. */
-export function cashRequiredNow(l: {
-  askingCash: Prisma.Decimal | null;
-  totalContractPrice: Prisma.Decimal | null;
-  developerAssignmentFee: Prisma.Decimal | null;
-}): Decimal {
-  return money(l.askingCash?.toString())
-    .plus(buyerPlatformFee(l.totalContractPrice?.toString() ?? 0))
-    .plus(money(l.developerAssignmentFee?.toString()));
+/**
+ * Analyst-verified dues payable alongside the transfer. An unverified field has
+ * a null `verifiedSource` and contributes nothing rather than being guessed at.
+ */
+export function duesFor(l: Pick<ListingCard, "contract">): Decimal {
+  return l.contract.fields
+    .filter((f) => f.key === "MAINTENANCE_DEPOSIT" || f.key === "CLUB_FEE")
+    .reduce<Decimal>(
+      (acc, f) => (f.verifiedSource ? acc.plus(money(f.verifiedNum?.toString())) : acc),
+      money(0),
+    );
 }
 
+/**
+ * Cash a buyer must produce at assignment.
+ *
+ * ONE definition, used by the card, the opportunity header, the mobile CTA bar
+ * and the cost breakdown. It delegates to `costFor` so those surfaces cannot
+ * drift apart: a card that omitted the dues while the page below it included
+ * them printed two different answers to the same question.
+ */
+export function cashRequiredNow(l: ListingCard): Decimal {
+  return costFor(l).cashRequiredNow;
+}
+
+/**
+ * KNOWN LIMITATION: this multiplies the regular installment by the remaining
+ * count, whereas `getOpportunity` and `projectVerifiedReadModel` sum the actual
+ * remaining schedule rows. The two agree for every listing today — asserted by
+ * `tests/unit/public-figures.test.ts`, which fails the moment they diverge —
+ * but a listing whose REMAINING schedule contains a balloon, delivery or
+ * maintenance payment would split the card from the opportunity page again.
+ * The fix is to select the remaining installment rows into `CARD_SELECT` and
+ * sum them; it is deferred because it loads a full schedule per card.
+ */
 export function remainingTotalFor(l: {
   installmentAmount: Prisma.Decimal | null;
   remainingInstallments: number | null;
@@ -282,11 +314,17 @@ export function remainingTotalFor(l: {
   return money(l.installmentAmount?.toString()).mul(l.remainingInstallments ?? 0);
 }
 
+/**
+ * The buyer's full position on a listing. Every public money figure and the
+ * developer-price comparison derive from this one call, on the same inputs
+ * `projectVerifiedReadModel` uses to store `discountPctBps`.
+ */
 export function costFor(l: ListingCard) {
   return totalEffectiveCost({
     cashToSeller: l.askingCash?.toString() ?? 0,
     totalContractPrice: l.totalContractPrice?.toString() ?? 0,
     developerAssignmentFee: l.developerAssignmentFee?.toString() ?? 0,
+    maintenanceAndClubDues: duesFor(l),
     remainingInstallmentsTotal: remainingTotalFor(l),
     arrears: l.contract.hasArrears ? l.contract.arrearsAmount?.toString() ?? 0 : 0,
     currentDeveloperPrice: l.contract.unit.currentDeveloperPrice?.toString() ?? undefined,

@@ -20,6 +20,7 @@
     "seed": "node --env-file=.env --conditions=react-server --import tsx prisma/seed/index.ts",
     "setup": "npm run db:up && npm run db:generate && npm run db:deploy && npm run assets:fetch && npm run seed",
     "worker": "node --env-file=.env --conditions=react-server --import tsx scripts/worker.ts",
+    "reproject": "node --env-file=.env --conditions=react-server --import tsx scripts/reproject-listings.ts",
     "test": "node --env-file=.env --conditions=react-server ./node_modules/vitest/vitest.mjs run",
     "test:watch": "node --env-file=.env --conditions=react-server ./node_modules/vitest/vitest.mjs",
     "test:e2e": "playwright test"

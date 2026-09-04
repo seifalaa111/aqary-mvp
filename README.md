@@ -9,7 +9,7 @@ overprice**, receives in cash the amount they have already paid, and the buyer
 continues the remaining instalments **at the old contractual price**.
 
 - **0% commission from the seller.**
-- **1.25% success fee from the buyer, charged only on a completed assignment.**
+- **2% success fee from the buyer, charged only on a completed assignment.**
 - **No listing goes live without a human analyst signing off every figure.**
 
 This repository is a working MVP: real Postgres, real domain logic, real state
@@ -188,7 +188,7 @@ A stale browser cannot talk the server into publishing an unverified file.
 `Decimal` everywhere, never float. Currency is EGP everywhere.
 `src/lib/money.ts` is the single formatting authority; `formatMoney` produces
 `EGP 9,450,000` and money renders with tabular figures so columns align. Every
-economic constant lives in `src/lib/config.ts` — `PLATFORM_FEE_BPS = 125`,
+economic constant lives in `src/lib/config.ts` — `PLATFORM_FEE_BPS = 200`,
 `SELLER_FEE_BPS = 0` — and is read from there, never inlined.
 
 ---
@@ -268,7 +268,7 @@ Everything in `.env.example` has a working default. The switches that matter:
 DATABASE_URL="postgresql://aqary:aqary@localhost:55432/aqary?schema=public"
 AUTH_SECRET="dev-only-secret-change-me-0123456789abcdef"
 
-PLATFORM_FEE_BPS=125      # 1.25% buyer success fee
+PLATFORM_FEE_BPS=200      # 2% buyer success fee
 SELLER_FEE_BPS=0          # 0% seller commission
 
 AI_MODE=mock              # mock | live   — mock needs no API key

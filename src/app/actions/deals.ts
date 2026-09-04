@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { MilestoneKey, PaymentKind } from "@prisma/client";
+import type { MilestoneKey, PaymentKind, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { AuthorizationError, requireDealAccess } from "@/lib/auth/guard";
 import { completeMilestone, DealError, postDealMessage, rateDeal, blockMilestone } from "@/lib/services/deals";
@@ -18,18 +18,28 @@ function fail(err: unknown): DealResult<never> {
   return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
 }
 
+function actorRole(access: { user: { activeRole: Role; roles: Role[] }; party: "BUYER" | "SELLER" | "COORDINATOR" | "DEVELOPER_PARTNER" }): Role {
+  // The server session, not client input, picks the operative role. An admin
+  // must deliberately be in the admin workspace to use an override.
+  if (access.user.activeRole === "ADMIN" && access.user.roles.includes("ADMIN")) return "ADMIN";
+  if (access.party === "BUYER") return "BUYER";
+  if (access.party === "SELLER") return "SELLER";
+  if (access.party === "DEVELOPER_PARTNER") return "DEVELOPER_PARTNER";
+  return "ANALYST";
+}
+
 export async function advanceMilestone(input: {
   dealId: string;
   key: MilestoneKey;
   note?: string;
 }): Promise<DealResult> {
   try {
-    const { user, party } = await requireDealAccess(input.dealId);
+    const access = await requireDealAccess(input.dealId);
     await completeMilestone({
       dealId: input.dealId,
       key: input.key,
-      actorId: user.id,
-      actorRole: party === "BUYER" ? "BUYER" : party === "SELLER" ? "SELLER" : "ANALYST",
+      actorId: access.user.id,
+      actorRole: actorRole(access),
       note: input.note,
     });
     revalidatePath(`/deals/${input.dealId}`);
@@ -45,9 +55,15 @@ export async function flagMilestone(input: {
   reason: string;
 }): Promise<DealResult> {
   try {
-    const { user } = await requireDealAccess(input.dealId);
+    const access = await requireDealAccess(input.dealId);
     if (input.reason.trim().length < 5) return { ok: false, error: "Say what is blocking it" };
-    await blockMilestone({ dealId: input.dealId, key: input.key, actorId: user.id, reason: input.reason });
+    await blockMilestone({
+      dealId: input.dealId,
+      key: input.key,
+      actorId: access.user.id,
+      actorRole: actorRole(access),
+      reason: input.reason,
+    });
     revalidatePath(`/deals/${input.dealId}`);
     return { ok: true };
   } catch (err) {
@@ -65,11 +81,12 @@ export async function payNow(input: {
   simulate?: "SUCCESS" | "FAILURE" | "DEFAULT";
 }): Promise<DealResult<{ paymentId: string; status: string }>> {
   try {
-    const { user } = await requireDealAccess(input.dealId);
+    const access = await requireDealAccess(input.dealId);
     const payment = await initiatePayment({
       dealId: input.dealId,
       kind: input.kind,
-      actorId: user.id,
+      actorId: access.user.id,
+      actorRole: actorRole(access),
       simulate: input.simulate,
     });
 
@@ -92,10 +109,12 @@ export async function retryFailedPayment(input: {
   simulate?: "SUCCESS" | "FAILURE" | "DEFAULT";
 }): Promise<DealResult<{ status: string }>> {
   try {
-    const { user } = await requireDealAccess(input.dealId);
+    const access = await requireDealAccess(input.dealId);
     const retried = await retryPayment({
+      dealId: input.dealId,
       paymentId: input.paymentId,
-      actorId: user.id,
+      actorId: access.user.id,
+      actorRole: actorRole(access),
       simulate: input.simulate,
     });
     await new Promise((r) => setTimeout(r, 1300));
@@ -111,7 +130,16 @@ export async function retryFailedPayment(input: {
 /** Forces the pending callback through, for a payment left in PROCESSING. */
 export async function settlePayment(input: { dealId: string; paymentId: string }): Promise<DealResult> {
   try {
-    await requireDealAccess(input.dealId);
+    const access = await requireDealAccess(input.dealId);
+    const payment = await prisma.payment.findUniqueOrThrow({ where: { id: input.paymentId } });
+    // Bind both IDs before touching a provider callback. A caller who can read
+    // deal A cannot use its URL to poll or settle a payment on deal B.
+    if (payment.dealId !== input.dealId) return { ok: false, error: "Payment does not belong to this deal" };
+    const role = actorRole(access);
+    const buyerPayment = ["RESERVATION_DEPOSIT", "PLATFORM_FEE", "DEVELOPER_ASSIGNMENT_FEE"].includes(payment.kind);
+    if (role !== "ADMIN" && !(role === "BUYER" && buyerPayment)) {
+      return { ok: false, error: "You cannot settle this payment" };
+    }
     await handlePaymentCallback(input.paymentId);
     revalidatePath(`/deals/${input.dealId}`);
     return { ok: true };
@@ -122,10 +150,10 @@ export async function settlePayment(input: { dealId: string; paymentId: string }
 
 export async function sendDealMessage(input: { dealId: string; body: string }): Promise<DealResult> {
   try {
-    const { user } = await requireDealAccess(input.dealId);
+    const access = await requireDealAccess(input.dealId);
     const body = input.body.trim().slice(0, 4000);
     if (body.length === 0) return { ok: false, error: "Write something first" };
-    await postDealMessage({ dealId: input.dealId, senderId: user.id, body });
+    await postDealMessage({ dealId: input.dealId, senderId: access.user.id, actorRole: actorRole(access), body });
     revalidatePath(`/deals/${input.dealId}`);
     return { ok: true };
   } catch (err) {
@@ -139,8 +167,8 @@ export async function rate(input: {
   notes?: string;
 }): Promise<DealResult> {
   try {
-    const { user } = await requireDealAccess(input.dealId);
-    await rateDeal({ dealId: input.dealId, actorId: user.id, rating: input.rating, notes: input.notes });
+    const access = await requireDealAccess(input.dealId);
+    await rateDeal({ dealId: input.dealId, actorId: access.user.id, rating: input.rating, notes: input.notes });
     revalidatePath(`/deals/${input.dealId}`);
     return { ok: true };
   } catch (err) {

@@ -46,20 +46,28 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ key: string
     let allowed = isStaff || isOwner;
 
     if (!allowed && document.listingId) {
-      // A buyer who has accepted the confidentiality terms may read the vault
-      // of a published listing.
-      const [consent, listing] = await Promise.all([
+      // Confidentiality consent is necessary but never sufficient. A buyer
+      // must be a concrete offer/deal participant; otherwise a single consent
+      // row would unlock every seller contract on the marketplace.
+      const [consent, involved, developerDeal] = await Promise.all([
         prisma.consent.findFirst({
           where: { userId: user.id, type: "BUYER_CONFIDENTIALITY", granted: true },
         }),
-        prisma.listing.findUnique({ where: { id: document.listingId }, select: { status: true } }),
+        prisma.offer.count({
+          where: { listingId: document.listingId, buyerId: user.id },
+        }),
+        user.roles.includes("DEVELOPER_PARTNER")
+          ? prisma.deal.findFirst({
+              where: {
+                listingId: document.listingId,
+                developer: { partnerMembers: { some: { userId: user.id, active: true } } },
+              },
+              select: { id: true },
+            })
+          : null,
       ]);
       allowed =
-        Boolean(consent) &&
-        Boolean(listing) &&
-        ["LISTED", "UNDER_OFFER", "RESERVED", "ASSIGNMENT_IN_PROGRESS", "COMPLETED"].includes(
-          listing!.status,
-        );
+        (Boolean(consent) && involved > 0) || Boolean(developerDeal);
     }
 
     if (!allowed) {

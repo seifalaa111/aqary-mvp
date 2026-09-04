@@ -436,25 +436,26 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  sellerProfile      SellerProfile?
-  buyerProfile       BuyerProfile?
-  sessions           Session[]
-  listings           Listing[]           @relation("SellerListings")
-  assignedListings   Listing[]           @relation("AnalystListings")
-  documents          Document[]
-  buyerOffers        Offer[]             @relation("BuyerOffers")
-  sellerOffers       Offer[]             @relation("SellerOffers")
-  buyerDeals         Deal[]              @relation("BuyerDeals")
-  sellerDeals        Deal[]              @relation("SellerDeals")
-  coordinatedDeals   Deal[]              @relation("CoordinatorDeals")
-  notifications      Notification[]
-  messages           Message[]
-  consents           Consent[]
-  savedSearches      SavedSearch[]
-  savedListings      SavedListing[]
-  matches            Match[]
-  auditEvents        AuditEvent[]
-  documentAccessLogs DocumentAccessLog[]
+  sellerProfile        SellerProfile?
+  buyerProfile         BuyerProfile?
+  sessions             Session[]
+  listings             Listing[]                    @relation("SellerListings")
+  assignedListings     Listing[]                    @relation("AnalystListings")
+  documents            Document[]
+  buyerOffers          Offer[]                      @relation("BuyerOffers")
+  sellerOffers         Offer[]                      @relation("SellerOffers")
+  buyerDeals           Deal[]                       @relation("BuyerDeals")
+  sellerDeals          Deal[]                       @relation("SellerDeals")
+  coordinatedDeals     Deal[]                       @relation("CoordinatorDeals")
+  notifications        Notification[]
+  messages             Message[]
+  consents             Consent[]
+  savedSearches        SavedSearch[]
+  savedListings        SavedListing[]
+  matches              Match[]
+  auditEvents          AuditEvent[]
+  documentAccessLogs   DocumentAccessLog[]
+  developerMemberships DeveloperPartnerMembership[]
 
   @@index([kycStatus])
   @@index([createdAt])
@@ -534,16 +535,35 @@ model BuyerProfile {
 // ---------------------------------------------------------------------------
 
 model Developer {
-  id            String                     @id @default(cuid())
-  slug          String                     @unique
-  nameEn        String
-  nameAr        String
-  descriptionEn String?
-  descriptionAr String?
-  isDemo        Boolean                    @default(true)
-  createdAt     DateTime                   @default(now())
-  projects      Project[]
-  policy        DeveloperAssignmentPolicy?
+  id             String                       @id @default(cuid())
+  slug           String                       @unique
+  nameEn         String
+  nameAr         String
+  descriptionEn  String?
+  descriptionAr  String?
+  isDemo         Boolean                      @default(true)
+  createdAt      DateTime                     @default(now())
+  projects       Project[]
+  policy         DeveloperAssignmentPolicy?
+  partnerMembers DeveloperPartnerMembership[]
+  deals          Deal[]
+}
+
+/// A developer-partner login belongs to one or more developer organisations.
+/// The role alone grants no tenant access; every partner read and mutation is
+/// scoped through an active membership row.
+model DeveloperPartnerMembership {
+  id          String    @id @default(cuid())
+  userId      String
+  developerId String
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  developer   Developer @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, developerId])
+  @@index([developerId, active])
 }
 
 model DeveloperAssignmentPolicy {
@@ -1020,12 +1040,12 @@ model Listing {
 
   assignedAnalystId String?
   slaDueAt          DateTime?
-  wizardStep        Int      @default(1)
-  wizardCompleted   Int[]    @default([])
-  viewCount         Int      @default(0)
-  isDemo            Boolean  @default(false)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  wizardStep        Int       @default(1)
+  wizardCompleted   Int[]     @default([])
+  viewCount         Int       @default(0)
+  isDemo            Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   contract      Contract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
   seller        User           @relation("SellerListings", fields: [sellerId], references: [id], onDelete: Cascade)
@@ -1123,29 +1143,35 @@ model Offer {
 }
 
 model Deal {
-  id                     String     @id @default(cuid())
-  reference              String     @unique
-  listingId              String     @unique
-  offerId                String     @unique
-  buyerId                String
-  sellerId               String
-  coordinatorId          String?
-  status                 DealStatus @default(ACTIVE)
-  cashToSeller           Decimal    @db.Decimal(18, 2)
-  platformFee            Decimal    @db.Decimal(18, 2)
-  developerAssignmentFee Decimal    @db.Decimal(18, 2)
-  reservationDeposit     Decimal    @db.Decimal(18, 2)
-  contactUnmasked        Boolean    @default(false)
-  buyerRating            Int?
-  sellerRating           Int?
-  outcomeNotes           String?
-  createdAt              DateTime   @default(now())
-  completedAt            DateTime?
-  cancelledAt            DateTime?
-  cancellationReason     String?
+  id                      String     @id @default(cuid())
+  reference               String     @unique
+  listingId               String     @unique
+  offerId                 String     @unique
+  /// Denormalised tenant key, copied from the listing's project at creation.
+  developerId             String
+  /// Immutable JSON copy of the developer policy used to open this deal.
+  /// Later policy edits must never rewrite an in-flight transaction.
+  developerPolicySnapshot Json
+  buyerId                 String
+  sellerId                String
+  coordinatorId           String?
+  status                  DealStatus @default(ACTIVE)
+  cashToSeller            Decimal    @db.Decimal(18, 2)
+  platformFee             Decimal    @db.Decimal(18, 2)
+  developerAssignmentFee  Decimal    @db.Decimal(18, 2)
+  reservationDeposit      Decimal    @db.Decimal(18, 2)
+  contactUnmasked         Boolean    @default(false)
+  buyerRating             Int?
+  sellerRating            Int?
+  outcomeNotes            String?
+  createdAt               DateTime   @default(now())
+  completedAt             DateTime?
+  cancelledAt             DateTime?
+  cancellationReason      String?
 
   listing     Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
   offer       Offer       @relation(fields: [offerId], references: [id])
+  developer   Developer   @relation(fields: [developerId], references: [id])
   buyer       User        @relation("BuyerDeals", fields: [buyerId], references: [id])
   seller      User        @relation("SellerDeals", fields: [sellerId], references: [id])
   coordinator User?       @relation("CoordinatorDeals", fields: [coordinatorId], references: [id])
@@ -1154,6 +1180,7 @@ model Deal {
   messages    Message[]
 
   @@index([status])
+  @@index([developerId, status])
 }
 
 model Milestone {

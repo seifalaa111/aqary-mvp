@@ -64,6 +64,10 @@ export default async function DealPage({
             take: 1,
             select: { variants: true, altEn: true },
           },
+          documents: {
+            orderBy: { createdAt: "desc" },
+            select: { id: true, type: true, fileName: true, storageKey: true, status: true },
+          },
         },
       },
       buyer: { select: { id: true, fullNameEn: true, phone: true, email: true, avatarColor: true } },
@@ -89,7 +93,7 @@ export default async function DealPage({
   return (
     <DealRoom
       locale={locale}
-      viewer={{ id: user.id, party }}
+      viewer={{ id: user.id, party, activeRole: user.activeRole }}
       deal={{
         id: deal.id,
         reference: deal.reference,
@@ -125,6 +129,7 @@ export default async function DealPage({
         coverAlt: deal.listing.media[0]?.altEn ?? "",
         requiredDocuments: deal.listing.contract.unit.project.developer.policy?.requiredDocuments ?? [],
         nocDays: deal.listing.contract.unit.project.developer.policy?.typicalNocDays ?? null,
+        documents: deal.listing.documents,
       }}
       parties={{
         buyer: { ...contact(deal.buyer), color: deal.buyer.avatarColor, isYou: deal.buyer.id === user.id },

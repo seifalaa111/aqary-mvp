@@ -140,7 +140,7 @@ export function DocumentViewer({
               }}
             >
               {highlight.label ? (
-                <span className="absolute -top-6 inset-inline-start-0 whitespace-nowrap rounded-xs bg-brass px-1.5 py-0.5 font-mono text-2xs text-ink">
+                <span className="absolute -top-6 start-0 whitespace-nowrap rounded-xs bg-brass px-1.5 py-0.5 font-mono text-2xs text-ink">
                   {highlight.label}
                 </span>
               ) : null}

@@ -279,7 +279,7 @@ export default async function SellerListingPage({
                           <Image src={v.thumb} alt={m.altEn} fill sizes="100px" className="object-cover" />
                         ) : null}
                         {m.moderationStatus !== "APPROVED" ? (
-                          <span className="absolute inset-inline-start-0.5 bottom-0.5">
+                          <span className="absolute start-0.5 bottom-0.5">
                             <Badge tone="pending">{m.moderationStatus.toLowerCase()}</Badge>
                           </span>
                         ) : null}

@@ -1,10 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { cn, Spinner } from "@/components/ui/primitives";
 import { useUrlFilters } from "./url-filters";
 
 export function Pagination({ page, pageCount }: { page: number; pageCount: number }) {
+  const t = useTranslations("market");
   const { set } = useUrlFilters();
   const [pending, startTransition] = useTransition();
   if (pageCount <= 1) return null;
@@ -20,14 +22,14 @@ export function Pagination({ page, pageCount }: { page: number; pageCount: numbe
   );
 
   return (
-    <nav className="mt-10 flex items-center justify-center gap-1" aria-label="Pagination">
+    <nav className="mt-10 flex items-center justify-center gap-1" aria-label={t("pagination")}>
       <button
         type="button"
         disabled={page === 1 || pending}
         onClick={() => go(page - 1)}
         className="h-9 rounded-sm border border-rule-strong px-3 text-xs text-ink-70 disabled:opacity-40"
       >
-        ←
+        <span className="arrow-forward inline-block">←</span>
       </button>
       {pending ? <Spinner className="mx-2 size-3.5 text-ink-50" /> : null}
       {pages.map((p, i) => (
@@ -54,7 +56,7 @@ export function Pagination({ page, pageCount }: { page: number; pageCount: numbe
         onClick={() => go(page + 1)}
         className="h-9 rounded-sm border border-rule-strong px-3 text-xs text-ink-70 disabled:opacity-40"
       >
-        →
+        <span className="arrow-forward inline-block">→</span>
       </button>
     </nav>
   );

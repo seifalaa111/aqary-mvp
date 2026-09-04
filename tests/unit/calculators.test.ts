@@ -73,9 +73,9 @@ describe("fees", () => {
     expect(config.SELLER_FEE_BPS).toBe(0);
   });
 
-  it("charges the buyer 1.25% of the total contract value", () => {
-    expect(config.PLATFORM_FEE_BPS).toBe(125);
-    expect(buyerPlatformFee("9500000").toString()).toBe("118750");
+  it("charges the buyer 2% of the total contract value", () => {
+    expect(config.PLATFORM_FEE_BPS).toBe(200);
+    expect(buyerPlatformFee("9500000").toString()).toBe("190000");
   });
 
   it("reads the fee from configuration, not a literal", () => {
@@ -223,21 +223,21 @@ describe("total effective cost", () => {
 
   it("adds every component the buyer actually pays", () => {
     const r = totalEffectiveCost(input);
-    expect(r.platformFee.toString()).toBe("100000"); // 1.25% of 8m
-    expect(r.cashRequiredNow.toString()).toBe("2300000"); // 2m + 100k + 200k
-    expect(r.totalEffectiveCost.toString()).toBe("8300000");
+    expect(r.platformFee.toString()).toBe("160000"); // 2% of 8m
+    expect(r.cashRequiredNow.toString()).toBe("2360000"); // 2m + 160k + 200k
+    expect(r.totalEffectiveCost.toString()).toBe("8360000");
   });
 
   it("compares against buying the same unit from the developer today", () => {
     const r = totalEffectiveCost(input);
-    expect(r.savingVsDeveloperToday!.toString()).toBe("3700000");
-    expect(r.savingPctBps).toBe(3083);
+    expect(r.savingVsDeveloperToday!.toString()).toBe("3640000");
+    expect(r.savingPctBps).toBe(3033);
   });
 
   it("includes arrears the buyer agrees to settle", () => {
     const r = totalEffectiveCost({ ...input, arrears: "250000" });
-    expect(r.cashRequiredNow.toString()).toBe("2550000");
-    expect(r.totalEffectiveCost.toString()).toBe("8550000");
+    expect(r.cashRequiredNow.toString()).toBe("2610000"); // 2m + 160k fee + 200k + 250k
+    expect(r.totalEffectiveCost.toString()).toBe("8610000");
   });
 
   it("returns no comparison when there is no developer price", () => {

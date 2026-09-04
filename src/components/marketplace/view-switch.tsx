@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/components/ui/primitives";
 import { useUrlFilters } from "./url-filters";
 
@@ -11,11 +12,12 @@ export function ViewSwitch({
   current: string;
   labels: { grid: string; compare: string; map: string };
 }) {
+  const t = useTranslations("market");
   const { set } = useUrlFilters();
   const [, startTransition] = useTransition();
 
   return (
-    <div className="inline-flex rounded-sm border border-rule-strong p-0.5" role="group" aria-label="View">
+    <div className="inline-flex rounded-sm border border-rule-strong p-0.5" role="group" aria-label={t("viewLabel")}>
       {(["grid", "compare", "map"] as const).map((v) => (
         <button
           key={v}

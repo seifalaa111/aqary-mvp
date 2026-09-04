@@ -136,21 +136,55 @@ export async function requireListingAccess(
   throw new AuthorizationError("Not a participant", "NOT_OWNER");
 }
 
+export type DealParty = "BUYER" | "SELLER" | "COORDINATOR" | "DEVELOPER_PARTNER";
+
+/**
+ * Resolves the developer organisations a partner can represent. The role is
+ * deliberately insufficient on its own: a partner has no access until an
+ * active membership maps them to a developer tenant.
+ */
+export async function requireDeveloperPartnerAccess(developerId?: string) {
+  const user = await requireRole("DEVELOPER_PARTNER", "ADMIN");
+  if (user.roles.includes("ADMIN")) return { user, developerIds: developerId ? [developerId] : null };
+
+  const memberships = await prisma.developerPartnerMembership.findMany({
+    where: { userId: user.id, active: true, ...(developerId ? { developerId } : {}) },
+    select: { developerId: true },
+  });
+  if (memberships.length === 0) {
+    await denied(user, "Developer", developerId ?? "membership");
+    throw new AuthorizationError("Not a member of this developer organisation", "NOT_OWNER");
+  }
+  return { user, developerIds: memberships.map((m) => m.developerId) };
+}
+
 export async function requireDealAccess(dealId: string) {
   const user = await requireUser();
   const deal = await prisma.deal.findUnique({
     where: { id: dealId },
-    select: { id: true, buyerId: true, sellerId: true, coordinatorId: true, contactUnmasked: true },
+    select: { id: true, buyerId: true, sellerId: true, coordinatorId: true, developerId: true, contactUnmasked: true },
   });
   if (!deal) throw new AuthorizationError("Deal not found", "NOT_FOUND");
 
   const isStaff = user.roles.includes("ANALYST") || user.roles.includes("ADMIN");
-  if (deal.buyerId !== user.id && deal.sellerId !== user.id && !isStaff) {
+  const developerMembership = user.roles.includes("DEVELOPER_PARTNER")
+    ? await prisma.developerPartnerMembership.findFirst({
+        where: { userId: user.id, developerId: deal.developerId, active: true },
+        select: { id: true },
+      })
+    : null;
+  if (deal.buyerId !== user.id && deal.sellerId !== user.id && !isStaff && !developerMembership) {
     await denied(user, "Deal", dealId);
     throw new AuthorizationError("Not a party to this deal", "NOT_OWNER");
   }
-  const party: "BUYER" | "SELLER" | "COORDINATOR" =
-    deal.buyerId === user.id ? "BUYER" : deal.sellerId === user.id ? "SELLER" : "COORDINATOR";
+  const party: DealParty =
+    deal.buyerId === user.id
+      ? "BUYER"
+      : deal.sellerId === user.id
+        ? "SELLER"
+        : developerMembership
+          ? "DEVELOPER_PARTNER"
+          : "COORDINATOR";
   return { user, deal, party };
 }
 

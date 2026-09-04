@@ -28,15 +28,6 @@ const CHIP_STYLES: Record<Provenance, string> = {
   PENDING: "border-rule-strong bg-paper-sunken text-ink-50",
 };
 
-const SHORT: Record<Provenance, string> = {
-  RECEIPT_VERIFIED: "RECEIPTS",
-  DEVELOPER_CONFIRMED: "DEVELOPER",
-  ANALYST_OVERRIDE: "ANALYST",
-  AI_EXTRACTED: "EXTRACTED",
-  SELLER_DECLARED: "DECLARED",
-  PENDING: "PENDING",
-};
-
 export function ProvenanceChip({
   source,
   size = "sm",
@@ -63,7 +54,7 @@ export function ProvenanceChip({
           aria-label={`${t("explainTitle")}: ${t(key)}`}
         >
           {key === "RECEIPT_VERIFIED" || key === "DEVELOPER_CONFIRMED" ? <CheckMark /> : null}
-          {SHORT[key]}
+          {t(`${key}_short`)}
         </button>
       </Popover.Trigger>
       <Popover.Portal>

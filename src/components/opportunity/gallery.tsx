@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/components/ui/primitives";
 import { Badge } from "@/components/ui/badges";
 
@@ -40,6 +40,16 @@ export function Gallery({
   };
 }) {
   const locale = useLocale();
+  const t = useTranslations("opportunity");
+  const tr = useTranslations("roomTag");
+
+  /** The "not this unit as delivered" disclosure, in the reader's language. */
+  const caption = (m: GalleryMedia) => {
+    if (!m.caption) return null;
+    if (m.kind === "SHOW_UNIT") return t("captionShowUnitNotDelivered");
+    if (m.kind === "PHOTO" || m.kind === "RENDER") return t("captionNotDelivered");
+    return m.caption;
+  };
   const isAr = locale === "ar";
   const [tab, setTab] = useState<Tab>("gallery");
   const [room, setRoom] = useState<string | null>(null);
@@ -118,7 +128,7 @@ export function Gallery({
                 room === null ? "border-ink text-ink" : "border-rule-strong text-ink-50 hover:text-ink",
               )}
             >
-              all
+              {t("galleryAll")}
             </button>
             {roomTags.map((r) => (
               <button
@@ -130,7 +140,7 @@ export function Gallery({
                   room === r ? "border-ink text-ink" : "border-rule-strong text-ink-50 hover:text-ink",
                 )}
               >
-                {r.toLowerCase()}
+                {tr.has(r) ? tr(r) : r.toLowerCase()}
               </button>
             ))}
           </div>
@@ -162,14 +172,18 @@ export function Gallery({
                 tab === "gallery" ? "object-cover" : "bg-paper object-contain",
               )}
             />
-            <div className="absolute inset-inline-start-3 top-3 flex gap-1.5">
+            <div className="absolute start-3 top-3 flex gap-1.5">
               <Badge tone="ink" className="backdrop-blur-sm">
                 {tab === "gallery" ? label(hero) : tab === "floorPlan" ? labels.floorPlan : labels.masterPlan}
               </Badge>
             </div>
-            {hero.caption ? (
-              <p className="absolute inset-inline-0 bottom-0 bg-ink/85 px-3 py-2 text-start text-2xs text-ink-text backdrop-blur-sm">
-                {hero.caption}
+            {/* Captions are seeded English. The disclosure they carry — that the
+                image is not this unit as delivered — matters too much to leave
+                untranslated, so it is rendered from the media kind instead of
+                the stored string. */}
+            {caption(hero) ? (
+              <p className="absolute inset-x-0 bottom-0 bg-ink/85 px-3 py-2 text-start text-2xs text-ink-text backdrop-blur-sm">
+                {caption(hero)}
               </p>
             ) : null}
           </button>
@@ -225,7 +239,7 @@ export function Gallery({
                   type="button"
                   onClick={() => setZoom((z) => Math.max(1, z - 0.25))}
                   className="size-8 rounded-sm border border-ink-rule text-ink-text"
-                  aria-label="Zoom out"
+                  aria-label={t("zoomOut")}
                 >
                   −
                 </button>
@@ -234,7 +248,7 @@ export function Gallery({
                   type="button"
                   onClick={() => setZoom((z) => Math.min(3, z + 0.25))}
                   className="size-8 rounded-sm border border-ink-rule text-ink-text"
-                  aria-label="Zoom in"
+                  aria-label={t("zoomIn")}
                 >
                   +
                 </button>
@@ -280,7 +294,7 @@ export function Gallery({
                 onClick={() => setLightbox((i) => (i === null ? null : (i + 1) % active.length))}
                 className="h-10 rounded-sm border border-ink-rule px-4 text-sm text-ink-text"
               >
-                {labels.next} →
+                {labels.next} <span className="arrow-forward inline-block">→</span>
               </button>
             </div>
           </Dialog.Content>

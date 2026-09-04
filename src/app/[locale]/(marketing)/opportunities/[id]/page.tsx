@@ -5,7 +5,6 @@ import { prisma } from "@/lib/db";
 import { config } from "@/lib/config";
 import { getSessionUser } from "@/lib/auth/session";
 import { getOpportunity, similarOpportunities } from "@/lib/queries/opportunity";
-import { cashRequiredNow } from "@/lib/queries/marketplace";
 import { affordability, type Frequency } from "@/lib/domain/calculators";
 import { egp, formatDate, formatQuarter, frequencyLabel } from "@/lib/format";
 import { toCardData } from "@/components/marketplace/to-card-data";
@@ -23,6 +22,9 @@ import { OfferPanel } from "@/components/opportunity/offer-panel";
 import { Badge, VerificationScore } from "@/components/ui/badges";
 import { SaveButton } from "@/components/marketplace/save-button";
 import { Card, CardBody, CardHeader, CardTitle, Eyebrow, TermRow, TermSheet } from "@/components/ui/primitives";
+import { PositionHeader } from "@/components/opportunity/position-header";
+import { MobileCtaBar } from "@/components/opportunity/mobile-cta-bar";
+import type { Provenance } from "@/components/ui/provenance";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,12 @@ export default async function OpportunityPage({
   const tm = await getTranslations({ locale, namespace: "market" });
   const tu = await getTranslations({ locale, namespace: "unitType" });
   const tf = await getTranslations({ locale, namespace: "finishing" });
+  const tcity = await getTranslations({ locale, namespace: "city" });
+  const tas = await getTranslations({ locale, namespace: "assignmentStatus" });
+  const tds = await getTranslations({ locale, namespace: "deliveryStatus" });
+  const tv = await getTranslations({ locale, namespace: "view" });
+  const tc = await getTranslations({ locale, namespace: "common" });
+  const tst = await getTranslations({ locale, namespace: "status" });
   const isAr = locale === "ar";
 
   const data = await getOpportunity(id);
@@ -75,7 +83,12 @@ export default async function OpportunityPage({
     await prisma.listing.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => undefined);
   }
 
-  const requiredNow = cashRequiredNow(listing);
+  // The same breakdown the cost panel renders — not a second computation.
+  const requiredNow = cost.cashRequiredNow;
+  // The source the analyst actually adopted for the paid amount that caps the
+  // asking cash — rendered as-is rather than asserted to be a receipt.
+  const paidSource = (fields.find((f) => f.key === "AMOUNT_PAID")?.source ??
+    null) as Provenance | null;
   const fit =
     buyerProfile?.availableCash && buyerProfile.maxInstallment
       ? affordability({
@@ -102,10 +115,10 @@ export default async function OpportunityPage({
   }));
 
   return (
-    <div className="mx-auto max-w-[1400px] px-5 py-6 md:px-8 md:py-10">
+    <div className="shell-wide py-6 pb-24 md:py-9 lg:pb-9">
       <nav className="mb-5">
         <Link href="/opportunities" className="text-xs text-ink-50 hover:text-ink">
-          ← {t("backToMarket")}
+          <span className="arrow-forward inline-block">←</span> {t("backToMarket")}
         </Link>
       </nav>
 
@@ -119,18 +132,70 @@ export default async function OpportunityPage({
               breakdown={listing.verificationScoreBreakdown as never}
               locale={locale}
             />
-            {listing.status !== "LISTED" ? <Badge tone="info">{listing.status.replace(/_/g, " ")}</Badge> : null}
+            {listing.status !== "LISTED" ? (
+              <Badge tone="info">
+                {tst.has(listing.status) ? tst(listing.status) : listing.status.replace(/_/g, " ")}
+              </Badge>
+            ) : null}
           </div>
-          <h1 className="display-section text-ink">{isAr ? project.nameAr : project.nameEn}</h1>
+          <h1 className="display-hero text-ink">{isAr ? project.nameAr : project.nameEn}</h1>
           <p className="mt-2 text-sm text-ink-50">
-            {isAr ? developer.nameAr : developer.nameEn} · {project.city} · {project.area} ·{" "}
-            {tu(unit.unitType as "APARTMENT")} · {unit.bedrooms} bed · {Number(unit.buaSqm).toFixed(0)} m²
+            {isAr ? developer.nameAr : developer.nameEn} ·{" "}
+            {tcity.has(project.city) ? tcity(project.city) : project.city}
+            {/* Several projects name the area the same as the city; repeating it
+                reads as a data error rather than as more precision. */}
+            {project.area && project.area !== project.city ? ` · ${project.area}` : ""} ·{" "}
+            {tu(unit.unitType as "APARTMENT")} · {tm("bedroomsCount", { count: unit.bedrooms })} ·{" "}
+            <span dir="ltr" className="unicode-bidi-isolate">
+              {Number(unit.buaSqm).toFixed(0)} m²
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-2">
           <SaveButton listingId={id} initialSaved={Boolean(saved)} variant="labelled" />
         </div>
       </header>
+
+      {/* ================= FINANCIAL POSITION ================= */}
+      <div className="mb-8">
+        <PositionHeader
+          cashRequiredNow={requiredNow.toString()}
+          cashToSeller={listing.askingCash?.toString() ?? null}
+          totalEffectiveCost={cost.totalEffectiveCost.toString()}
+          developerPriceToday={unit.currentDeveloperPrice?.toString() ?? null}
+          // Derived from the very total this header renders, so the figure and
+          // the percentage beside it can never disagree.
+          discountPctBps={cost.savingPctBps}
+          hasArrears={listing.contract.hasArrears}
+          outstandingBalance={listing.outstandingBalance?.toString() ?? null}
+          remainingCount={listing.remainingInstallments ?? 0}
+          installmentAmount={listing.installmentAmount?.toString() ?? null}
+          frequencyLabel={frequencyLabel(listing.installmentFrequency, locale)}
+          paidSource={paidSource}
+          labels={{
+            cashRequiredNow: tm("cashRequiredNow"),
+            cashRequiredNowHint: tm("cashRequiredNowHint"),
+            cashRequiredNowHintArrears: tm("cashRequiredNowHintArrears"),
+            cashToSeller: tm("cashToSeller"),
+            totalEffectiveCost: t("totalEffectiveCostLabel"),
+            totalCostHint: t("totalCostHint"),
+            developerPriceToday: tm("developerPriceToday"),
+            vsDeveloper: t("vsDeveloper", { price: "{price}" }),
+            belowDeveloper: t("belowDeveloper", { pct: "{pct}" }),
+            outstandingToDeveloper: t("outstandingToDeveloper"),
+            installment: tm("installment"),
+            remainingPayments: tm("remainingPayments", { count: listing.remainingInstallments ?? 0 }),
+          }}
+          action={
+            <a
+              href="#offer"
+              className="inline-flex h-11 items-center rounded-sm bg-brass px-5 text-sm font-semibold text-ink transition-colors hover:bg-brass-hover"
+            >
+              {t("makeOffer")} <span aria-hidden className="arrow-forward ms-1.5">→</span>
+            </a>
+          }
+        />
+      </div>
 
       {/* ================= GALLERY ================= */}
       <Gallery
@@ -142,9 +207,9 @@ export default async function OpportunityPage({
           actualPhotos: tm("actualPhotos"),
           showUnit: tm("showUnit"),
           renders: tm("developerRenders"),
-          close: "Close",
-          previous: "Previous",
-          next: "Next",
+          close: t("galleryClose"),
+          previous: t("galleryPrevious"),
+          next: t("galleryNext"),
         }}
       />
 
@@ -291,24 +356,28 @@ export default async function OpportunityPage({
                                 : "pending"
                           }
                         >
-                          {policy.assignmentAllowed.replace(/_/g, " ").toLowerCase()}
+                          {tas.has(policy.assignmentAllowed)
+                            ? tas(policy.assignmentAllowed)
+                            : policy.assignmentAllowed.replace(/_/g, " ").toLowerCase()}
                         </Badge>
                       </TermRow>
                       <TermRow label={t("assignmentFee")}>
                         {policy.feeType === "PERCENT"
-                          ? `${((policy.feePercentBps ?? 0) / 100).toFixed(2)}% of ${policy.feeBasis === "OUTSTANDING_BALANCE" ? "outstanding balance" : "contract price"}`
+                          ? policy.feeBasis === "OUTSTANDING_BALANCE"
+                            ? t("feeOfOutstanding", { pct: `${((policy.feePercentBps ?? 0) / 100).toFixed(2)}%` })
+                            : t("feeOfContract", { pct: `${((policy.feePercentBps ?? 0) / 100).toFixed(2)}%` })
                           : policy.feeType === "FIXED"
                             ? egp(policy.feeFixedAmount)
                             : "—"}
                       </TermRow>
                       <TermRow label={t("assignmentTimeline")}>
-                        {policy.typicalNocDays ? `${policy.typicalNocDays} days` : "—"}
+                        {policy.typicalNocDays ? t("nocDays", { days: policy.typicalNocDays }) : "—"}
                       </TermRow>
-                      <TermRow label="Minimum paid before assignment">
+                      <TermRow label={t("minPercentPaid")}>
                         {policy.minPercentPaidBps ? `${(policy.minPercentPaidBps / 100).toFixed(0)}%` : "—"}
                       </TermRow>
-                      <TermRow label="Minimum months elapsed">
-                        {policy.minMonthsElapsed ? `${policy.minMonthsElapsed} months` : "—"}
+                      <TermRow label={t("minMonthsElapsed")}>
+                        {policy.minMonthsElapsed ? t("monthsValue", { months: policy.minMonthsElapsed }) : "—"}
                       </TermRow>
                     </TermSheet>
 
@@ -316,7 +385,18 @@ export default async function OpportunityPage({
                       {isAr ? policy.conditionsAr : policy.conditionsEn}
                     </p>
 
-                    <p className="eyebrow mb-2 mt-6">{t("assignmentDocs")}</p>
+                    {/* A developer's own required-document wording is stored in
+                        English only; inventing Arabic for another party's legal
+                        requirements is not the presentation layer's call, so the
+                        reader is told rather than left to wonder. */}
+                    <p className="eyebrow mb-2 mt-6">
+                      {t("assignmentDocs")}
+                      {isAr ? (
+                        <span className="ms-2 rounded-xs border border-rule-strong px-1 py-px text-[9px] normal-case tracking-normal text-ink-50">
+                          {tc("englishOnly")}
+                        </span>
+                      ) : null}
+                    </p>
                     <ul className="flex flex-col gap-1.5">
                       {policy.requiredDocuments.map((d) => (
                         <li key={d} className="flex gap-2 text-sm text-ink-70">
@@ -328,13 +408,12 @@ export default async function OpportunityPage({
 
                     {policy.isSynthetic ? (
                       <p className="mt-6 rounded-md border border-pending/30 bg-pending-soft px-3 py-2 text-2xs leading-relaxed text-ink-70">
-                        Synthetic policy. Real assignment terms must be confirmed with the developer
-                        before any transaction — see ASSUMPTIONS.md.
+                        {t("syntheticPolicy")}
                       </p>
                     ) : null}
                   </>
                 ) : (
-                  <p className="text-sm text-ink-50">No assignment policy on file for this developer.</p>
+                  <p className="text-sm text-ink-50">{t("noPolicy")}</p>
                 )}
               </CardBody>
             </Card>
@@ -383,17 +462,17 @@ export default async function OpportunityPage({
         </div>
 
         {/* ================= STICKY RAIL ================= */}
-        <div className="lg:sticky lg:top-24 lg:self-start">
+        <div id="offer" className="scroll-mt-24 lg:sticky lg:top-24 lg:self-start">
           <Card className="overflow-hidden">
-            <CardHeader className="bg-paper-sunken/70">
-              <CardTitle>{tm("cashToSeller")}</CardTitle>
+            <CardHeader className="bg-paper-sunken">
+              <CardTitle>{tm("cashRequiredNow")}</CardTitle>
             </CardHeader>
             <CardBody>
-              <p className="money mb-1 text-money-xl font-semibold tracking-tight text-ink">
-                {egp(listing.askingCash, { style: "bare", decimals: 0 })}
+              <p className="money mb-1 figure-xl text-ink">
+                {egp(requiredNow, { style: "bare", decimals: 0 })}
               </p>
               <p className="mb-5 text-xs text-ink-50">
-                EGP · {t("costCashNow")} {egp(requiredNow, { decimals: 0 })}
+                EGP · {tm("cashToSeller")} {egp(listing.askingCash, { decimals: 0 })}
               </p>
 
               <TermSheet>
@@ -428,7 +507,8 @@ export default async function OpportunityPage({
                       ? tm("stretch")
                       : tm("aboveProfile")}
                   {" · "}
-                  cash {fit.cashCoveragePct}% · installment {fit.installmentCoveragePct}%
+                  {t("fitCash", { pct: fit.cashCoveragePct })} ·{" "}
+                  {t("fitInstallment", { pct: fit.installmentCoveragePct })}
                 </div>
               ) : null}
 
@@ -465,22 +545,40 @@ export default async function OpportunityPage({
           <div className="mt-4 rounded-lg border border-rule bg-paper-sunken/50 p-4">
             <p className="eyebrow mb-2">{t("unitDetails")}</p>
             <dl className="rule-t text-sm">
-              <Row label="Unit code" value={unit.unitCode} />
-              <Row label="Type" value={tu(unit.unitType as "APARTMENT")} />
-              <Row label="Built-up area" value={`${Number(unit.buaSqm).toFixed(0)} m²`} />
-              {unit.gardenSqm ? <Row label="Garden" value={`${Number(unit.gardenSqm).toFixed(0)} m²`} /> : null}
-              {unit.terraceSqm ? <Row label="Terrace" value={`${Number(unit.terraceSqm).toFixed(0)} m²`} /> : null}
-              <Row label="Bedrooms" value={String(unit.bedrooms)} />
-              <Row label="Bathrooms" value={String(unit.bathrooms)} />
-              {unit.floor !== null ? <Row label="Floor" value={String(unit.floor)} /> : null}
-              {unit.view ? <Row label="View" value={unit.view} /> : null}
-              <Row label="Finishing" value={tf(unit.finishing as "SEMI_FINISHED")} />
-              <Row label="Delivery status" value={unit.deliveryStatus.replace(/_/g, " ").toLowerCase()} />
-              <Row label="Contractual delivery" value={formatDate(unit.contractualDeliveryDate, locale)} />
+              <Row label={t("unitCode")} value={unit.unitCode} />
+              <Row label={t("unitTypeLabel")} value={tu(unit.unitType as "APARTMENT")} />
+              <Row label={t("bua")} value={`${Number(unit.buaSqm).toFixed(0)} m²`} />
+              {unit.gardenSqm ? <Row label={t("garden")} value={`${Number(unit.gardenSqm).toFixed(0)} m²`} /> : null}
+              {unit.terraceSqm ? <Row label={t("terrace")} value={`${Number(unit.terraceSqm).toFixed(0)} m²`} /> : null}
+              <Row label={t("bedrooms")} value={String(unit.bedrooms)} />
+              <Row label={t("bathrooms")} value={String(unit.bathrooms)} />
+              {unit.floor !== null ? <Row label={t("floor")} value={String(unit.floor)} /> : null}
+              {unit.view ? (
+                <Row label={t("view")} value={tv.has(unit.view) ? tv(unit.view) : unit.view} />
+              ) : null}
+              <Row label={t("finishingLabel")} value={tf(unit.finishing as "SEMI_FINISHED")} />
+              <Row
+                label={t("deliveryStatus")}
+                value={
+                  tds.has(unit.deliveryStatus)
+                    ? tds(unit.deliveryStatus)
+                    : unit.deliveryStatus.replace(/_/g, " ").toLowerCase()
+                }
+              />
+              <Row label={t("contractualDelivery")} value={formatDate(unit.contractualDeliveryDate, locale)} />
             </dl>
           </div>
         </div>
       </div>
+
+      {/* On a phone the offer panel is a long way down; the price and the next
+          step stay in reach. */}
+      <MobileCtaBar
+        amount={`${egp(requiredNow, { style: "bare", decimals: 0 })} EGP`}
+        label={tm("cashRequiredNow")}
+        cta={t("ctaSticky")}
+        targetId="offer"
+      />
     </div>
   );
 }

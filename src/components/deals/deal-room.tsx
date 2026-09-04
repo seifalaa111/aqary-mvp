@@ -11,7 +11,7 @@ import { egp, formatDate, formatQuarter, frequencyLabel, initials, relativeTime 
 
 export interface DealRoomProps {
   locale: string;
-  viewer: { id: string; party: "BUYER" | "SELLER" | "COORDINATOR" };
+  viewer: { id: string; party: "BUYER" | "SELLER" | "COORDINATOR" | "DEVELOPER_PARTNER"; activeRole: string };
   deal: {
     id: string; reference: string; status: string;
     cashToSeller: string; platformFee: string; developerAssignmentFee: string; reservationDeposit: string;
@@ -26,6 +26,7 @@ export interface DealRoomProps {
     installmentFrequency: string | null; deliveryDate: string | null;
     cover: string | null; coverAlt: string;
     requiredDocuments: string[]; nocDays: number | null;
+    documents: { id: string; type: string; fileName: string; storageKey: string; status: string }[];
   };
   parties: {
     buyer: { name: string; phone: string; email: string | null; color: string; isYou: boolean };
@@ -147,10 +148,15 @@ export function DealRoom(props: DealRoomProps) {
                 const blocked = m.status === "BLOCKED";
                 const payment = m.requiresPayment ? paymentFor(m.requiresPayment) : null;
                 const paid = payment?.status === "SUCCEEDED";
+                const ownsMilestone = viewer.activeRole === "ADMIN" || viewer.party === m.ownerRole;
                 const canAct =
                   !done &&
                   (active || blocked) &&
-                  milestones.slice(0, i).every((x) => x.status === "COMPLETED");
+                  milestones.slice(0, i).every((x) => x.status === "COMPLETED") &&
+                  ownsMilestone;
+                const canPay =
+                  viewer.activeRole === "ADMIN" ||
+                  (viewer.party === "BUYER" && m.requiresPayment !== "SELLER_RELEASE");
 
                 return (
                   <li key={m.key} className="relative flex gap-4 pb-6 last:pb-0">
@@ -228,6 +234,7 @@ export function DealRoom(props: DealRoomProps) {
                             }
                             locale={locale}
                             pending={pending}
+                            canPay={canPay}
                             onPay={(simulate) => run(() => payNow({ dealId: deal.id, kind: m.requiresPayment as never, simulate }))}
                             onRetry={(paymentId, simulate) =>
                               run(() => retryFailedPayment({ dealId: deal.id, paymentId, simulate }))
@@ -288,6 +295,10 @@ export function DealRoom(props: DealRoomProps) {
               })}
             </ol>
           </section>
+
+          {viewer.party === "DEVELOPER_PARTNER" || viewer.activeRole === "ADMIN" ? (
+            <DeveloperEvidenceUploader dealId={deal.id} listingId={listing.id} />
+          ) : null}
 
           {/* ---- Messages ---- */}
           <section>
@@ -412,6 +423,24 @@ export function DealRoom(props: DealRoomProps) {
                   ))}
                 </ul>
               ) : null}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>{isAr ? "مستندات الصفقة" : "Deal documents"}</CardTitle></CardHeader>
+            <CardBody>
+              {listing.documents.length === 0 ? (
+                <p className="text-xs text-ink-50">No documents are available for this deal yet.</p>
+              ) : (
+                <ul className="rule-t">
+                  {listing.documents.map((document) => (
+                    <li key={document.id} className="rule-b flex items-center justify-between gap-3 py-2">
+                      <div className="min-w-0"><p className="truncate text-xs text-ink">{document.fileName}</p><p className="text-2xs text-ink-30">{document.type.replace(/_/g, " ").toLowerCase()} · {document.status.toLowerCase()}</p></div>
+                      <a href={"/api/files/" + encodeURIComponent(document.storageKey)} target="_blank" rel="noreferrer" className="text-2xs font-medium text-ink underline underline-offset-4">Open</a>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardBody>
           </Card>
 
@@ -552,6 +581,7 @@ function PaymentBlock({
   onRetry,
   onSettle,
   pending,
+  canPay,
 }: {
   kind: string;
   payment: DealRoomProps["payments"][number] | null;
@@ -561,6 +591,7 @@ function PaymentBlock({
   onRetry: (paymentId: string, simulate?: "SUCCESS" | "FAILURE") => void;
   onSettle: (paymentId: string) => void;
   pending: boolean;
+  canPay: boolean;
 }) {
   const t = useTranslations("deal");
   const isAr = locale === "ar";
@@ -580,9 +611,11 @@ function PaymentBlock({
     return (
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-info">{t("paymentProcessing")}</span>
-        <Button size="sm" variant="secondary" loading={pending} onClick={() => onSettle(payment.id)}>
-          Check status
-        </Button>
+        {canPay ? (
+          <Button size="sm" variant="secondary" loading={pending} onClick={() => onSettle(payment.id)}>
+            Check status
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -595,14 +628,16 @@ function PaymentBlock({
             {t("paymentFailed")}: {payment.failureReason ?? payment.failureCode}
           </span>
         </Callout>
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" loading={pending} onClick={() => onRetry(payment.id, "SUCCESS")}>
-            {t("retryPayment")}
-          </Button>
-          <Button size="sm" variant="ghost" loading={pending} onClick={() => onRetry(payment.id, "FAILURE")}>
-            {t("paySimulateFailure")}
-          </Button>
-        </div>
+        {canPay ? (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" loading={pending} onClick={() => onRetry(payment.id, "SUCCESS")}>
+              {t("retryPayment")}
+            </Button>
+            <Button size="sm" variant="ghost" loading={pending} onClick={() => onRetry(payment.id, "FAILURE")}>
+              {t("paySimulateFailure")}
+            </Button>
+          </div>
+        ) : null}
         <p className="text-[10px] text-ink-30">
           {isAr
             ? "كل محاولة إعادة تنشئ سجل دفع جديدًا بمفتاح تكرار جديد."
@@ -619,20 +654,73 @@ function PaymentBlock({
           {kind.replace(/_/g, " ").toLowerCase()} · {egp(amount, { decimals: 0 })}
         </span>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" loading={pending} onClick={() => onPay("SUCCESS")}>
-          {t("paySimulateSuccess")}
-        </Button>
-        <Button size="sm" variant="ghost" loading={pending} onClick={() => onPay("FAILURE")}>
-          {t("paySimulateFailure")}
-        </Button>
-      </div>
+      {canPay ? (
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" loading={pending} onClick={() => onPay("SUCCESS")}>
+            {t("paySimulateSuccess")}
+          </Button>
+          <Button size="sm" variant="ghost" loading={pending} onClick={() => onPay("FAILURE")}>
+            {t("paySimulateFailure")}
+          </Button>
+        </div>
+      ) : (
+        <p className="text-2xs text-ink-50">Awaiting the authorized payer.</p>
+      )}
       <p className="text-[10px] leading-snug text-ink-30">
         {isAr
           ? "مزوّد الدفع محاكى. كل ما عداه — سجل الدفع، الحالات، مفاتيح التكرار، سجل التدقيق — حقيقي."
           : "The payment provider is mocked. Everything else — the payment record, the state transitions, the idempotency key, the audit trail — is real."}
       </p>
     </div>
+  );
+}
+
+function DeveloperEvidenceUploader({ dealId, listingId }: { dealId: string; listingId: string }) {
+  const router = useRouter();
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  return (
+    <section>
+      <Eyebrow>Developer evidence</Eyebrow>
+      <Card className="mt-3">
+        <CardBody>
+          <p className="mb-3 text-xs leading-relaxed text-ink-50">
+            Upload an NOC, appointment confirmation, or other developer-issued evidence. It is stored against this deal’s listing and appears in the deal document record.
+          </p>
+          {uploadError ? <div className="mb-3"><Callout tone="flagged">{uploadError}</Callout></div> : null}
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              const file = new FormData(form).get("file");
+              if (!(file instanceof File) || file.size === 0) {
+                setUploadError("Choose an evidence file first.");
+                return;
+              }
+              setUploading(true);
+              setUploadError(null);
+              const response = await fetch("/api/upload", { method: "POST", body: new FormData(form) });
+              const body = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+              setUploading(false);
+              if (!response.ok || !body?.ok) {
+                setUploadError(body?.error ?? "Evidence upload failed.");
+                return;
+              }
+              form.reset();
+              router.refresh();
+            }}
+          >
+            <input type="hidden" name="target" value="developer-evidence" />
+            <input type="hidden" name="dealId" value={dealId} />
+            <input type="hidden" name="listingId" value={listingId} />
+            <input type="hidden" name="type" value="DEVELOPER_NOC" />
+            <input name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="max-w-full text-xs text-ink-70" />
+            <Button type="submit" size="sm" loading={uploading}>Upload evidence</Button>
+          </form>
+        </CardBody>
+      </Card>
+    </section>
   );
 }
 

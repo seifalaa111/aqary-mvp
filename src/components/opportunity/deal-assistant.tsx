@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Link } from "@/i18n/routing";
 import { Button, Card, CardBody, Eyebrow, Textarea, Callout } from "@/components/ui/primitives";
@@ -28,6 +29,7 @@ export function DealAssistant({
   locale: string;
   labels: { title: string; sub: string; placeholder: string; send: string };
 }) {
+  const to = useTranslations("opportunity");
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +102,7 @@ export function DealAssistant({
                     ) : null}
                     {turn.routeToHuman ? (
                       <div className="mt-3">
-                        <Badge tone="pending">Routed to a coordinator</Badge>
+                        <Badge tone="pending">{to("routedToCoordinator")}</Badge>
                       </div>
                     ) : null}
                   </div>

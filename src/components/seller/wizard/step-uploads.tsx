@@ -333,7 +333,7 @@ function MediaGrid({
               <Image src={m.thumb} alt={m.altEn} fill sizes="200px" className="object-cover" />
             ) : null}
             {m.isCover ? (
-              <span className="absolute inset-inline-start-1 top-1">
+              <span className="absolute start-1 top-1">
                 <Badge tone="ink">cover</Badge>
               </span>
             ) : null}

@@ -72,7 +72,7 @@ export function MapView({ points }: { points: MapPoint[] }) {
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-rule bg-paper-sunken">
-      <svg viewBox={`0 0 ${W} ${H}`} className="block h-[620px] w-full" role="img" aria-label="Map of opportunities">
+      <svg viewBox={`0 0 ${W} ${H}`} className="block h-[620px] w-full" role="img" aria-label={t("mapLabel")}>
         <defs>
           <pattern id="aq-grid" width="50" height="50" patternUnits="userSpaceOnUse">
             <path d="M50 0H0V50" fill="none" stroke="var(--color-rule)" strokeWidth="0.6" opacity="0.55" />
@@ -131,7 +131,7 @@ export function MapView({ points }: { points: MapPoint[] }) {
       {focused ? (
         <Link
           href={`/opportunities/${focused.id}`}
-          className="absolute inset-inline-start-4 bottom-4 flex w-72 gap-3 rounded-lg border border-rule bg-paper-raised p-3 shadow-e3"
+          className="absolute start-4 bottom-4 flex w-72 gap-3 rounded-lg border border-rule bg-paper-raised p-3 shadow-e3"
         >
           <div className="relative size-20 shrink-0 overflow-hidden rounded-sm bg-paper-sunken">
             {focused.image ? (
@@ -147,7 +147,7 @@ export function MapView({ points }: { points: MapPoint[] }) {
         </Link>
       ) : null}
 
-      <div className="absolute inset-inline-end-4 top-4 flex flex-col gap-1">
+      <div className="absolute end-4 top-4 flex flex-col gap-1">
         {(["+", "−"] as const).map((sign) => (
           <button
             key={sign}
@@ -161,8 +161,8 @@ export function MapView({ points }: { points: MapPoint[] }) {
         ))}
       </div>
 
-      <p className="absolute inset-inline-start-4 top-4 font-mono text-2xs uppercase tracking-wider text-ink-30">
-        {t("viewMap")} · schematic projection · {points.length} pins
+      <p className="absolute start-4 top-4 font-mono text-2xs uppercase tracking-wider text-ink-30">
+        {t("mapCaption", { count: points.length })}
       </p>
     </div>
   );
