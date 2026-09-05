@@ -74,6 +74,7 @@ export function AdminListingsTable({
   const [reassignError, setReassignError] = useState<string | null>(null);
 
   const t = useTranslations("admin");
+  const tk = useTranslations("consoleUi");
   const isAr = locale === "ar";
 
   const filtered = rows.filter((r) => {
@@ -178,7 +179,7 @@ export function AdminListingsTable({
             {overrideError && <p className="text-xs text-flagged">{overrideError}</p>}
 
             <div>
-              <label className="block text-xs font-medium text-ink-70 mb-1">Target Status</label>
+              <label className="block text-xs font-medium text-ink-70 mb-1">{tk("targetStatus")}</label>
               <Select value={targetStatus} onChange={(e) => setTargetStatus(e.target.value as ListingStatus)}>
                 {ALL_STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -189,14 +190,12 @@ export function AdminListingsTable({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-ink-70 mb-1">
-                Justification (Mandatory, min 10 characters)
-              </label>
+              <label className="block text-xs font-medium text-ink-70 mb-1">{tk("justification10")}</label>
               <Textarea
                 rows={3}
                 value={overrideReason}
                 onChange={(e) => setOverrideReason(e.target.value)}
-                placeholder="Explain the business or operational reason for overriding this listing status..."
+                placeholder={tk("overrideReasonPlaceholder")}
               />
             </div>
 
@@ -210,9 +209,7 @@ export function AdminListingsTable({
                 loading={pending}
                 disabled={overrideReason.trim().length < 10}
                 onClick={handleOverrideSubmit}
-              >
-                Confirm Override
-              </Button>
+              >{tk("confirmOverride")}</Button>
             </div>
           </div>
         </div>
@@ -229,7 +226,7 @@ export function AdminListingsTable({
             {reassignError && <p className="text-xs text-flagged">{reassignError}</p>}
 
             <div>
-              <label className="block text-xs font-medium text-ink-70 mb-1">Select Analyst</label>
+              <label className="block text-xs font-medium text-ink-70 mb-1">{tk("selectAnalyst")}</label>
               <Select value={targetAnalystId} onChange={(e) => setTargetAnalystId(e.target.value)}>
                 <option value="">-- Choose analyst --</option>
                 {analysts.map((a) => (
@@ -241,11 +238,11 @@ export function AdminListingsTable({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-ink-70 mb-1">Reason (min 5 characters)</label>
+              <label className="block text-xs font-medium text-ink-70 mb-1">{tk("reason5")}</label>
               <Input
                 value={reassignReason}
                 onChange={(e) => setReassignReason(e.target.value)}
-                placeholder="e.g. Senior escalation review"
+                placeholder={tk("egSeniorEscalation")}
               />
             </div>
 
@@ -259,9 +256,7 @@ export function AdminListingsTable({
                 loading={pending}
                 disabled={!targetAnalystId || reassignReason.trim().length < 5}
                 onClick={handleReassignSubmit}
-              >
-                Confirm Reassignment
-              </Button>
+              >{tk("confirmReassignment")}</Button>
             </div>
           </div>
         </div>
@@ -277,11 +272,11 @@ export function AdminListingsTable({
           <table className="w-full min-w-[1000px] border-collapse bg-paper-raised text-sm">
             <thead>
               <tr className="border-b border-rule bg-paper-sunken/70">
-                <th className="p-3 text-start text-xs font-medium text-ink-50">Reference & Property</th>
-                <th className="p-3 text-start text-xs font-medium text-ink-50">Status & Quality</th>
-                <th className="p-3 text-end text-xs font-medium text-ink-50">Financials</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("referenceProperty")}</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("statusQuality")}</th>
+                <th className="p-3 text-end text-xs font-medium text-ink-50">{tk("financials")}</th>
                 <th className="p-3 text-start text-xs font-medium text-ink-50">Analyst</th>
-                <th className="p-3 text-center text-xs font-medium text-ink-50">Pipeline</th>
+                <th className="p-3 text-center text-xs font-medium text-ink-50">{tk("pipeline")}</th>
                 <th className="p-3 text-end text-xs font-medium text-ink-50">Actions</th>
               </tr>
             </thead>
@@ -374,14 +369,12 @@ export function AdminListingsTable({
                           setOverrideReason("");
                           setOverrideError(null);
                         }}
-                      >
-                        Override
-                      </Button>
+                      >{tk("override")}</Button>
                       <Link
                         href={`/analyst/listings/${r.id}`}
                         className="rounded-sm border border-rule px-2 py-1 text-2xs hover:bg-paper-sunken"
                       >
-                        Inspect →
+                        {tk("inspect")} <span aria-hidden className="arrow-forward">→</span>
                       </Link>
                     </div>
                   </td>

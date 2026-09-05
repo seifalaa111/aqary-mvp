@@ -59,6 +59,7 @@ export function ReconciliationPanel({
 }) {
   const t = useTranslations("analyst");
   const tl = useTranslations("fieldLabel");
+  const tk = useTranslations("consoleUi");
   const isAr = locale === "ar";
   const [resolving, setResolving] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -66,7 +67,7 @@ export function ReconciliationPanel({
   const [expanded, setExpanded] = useState<string | null>(null);
 
   if (!data) {
-    return <p className="text-sm text-ink-50">Reconciliation has not run for this file yet.</p>;
+    return <p className="text-sm text-ink-50">{tk("reconciliationNotRun")}</p>;
   }
 
   const sources: { label: string; value: string | null; source: string; note?: string }[] = [

@@ -27,6 +27,7 @@ export default async function PipelinePage({ params }: { params: Promise<{ local
   await requireRolePage("ANALYST", "ADMIN");
   const t = await getTranslations({ locale, namespace: "analyst" });
   const tm = await getTranslations({ locale, namespace: "milestone" });
+  const tk = await getTranslations({ locale, namespace: "consoleUi" });
 
   // Bounded. The board groups a page of deals, not the whole table — an
   // unbounded findMany here loads every deal ever opened on every render.
@@ -53,7 +54,7 @@ export default async function PipelinePage({ params }: { params: Promise<{ local
       <h1 className="mb-6 mt-1 display-section text-ink">{t("pipeline")}</h1>
 
       {deals.length === 0 ? (
-        <EmptyState title="No deals in the pipeline yet" body="A deal room opens the moment an offer is accepted." />
+        <EmptyState title={tk("noDealsInPipeline")} body="A deal room opens the moment an offer is accepted." />
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
           {COLUMNS.map((col) => {

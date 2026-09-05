@@ -62,16 +62,20 @@ describe("i18n", () => {
     }
   });
 
-  it("keeps the buyer and seller surfaces free of untranslated English copy", () => {
-    // Buyer and seller are the surfaces an Arabic-speaking user must complete a
-    // transaction on, so every string there belongs in the catalogue. The staff
-    // console is deliberately out of scope: English internal tooling is a scope
-    // decision recorded in ASSUMPTIONS.md, not an oversight.
+  it("keeps every role surface free of untranslated English copy", () => {
+    // Buyer, seller, analyst, admin and the developer portal: an Arabic speaker
+    // has to be able to do their job on all of them, staff included. Every
+    // string belongs in the catalogue rather than welded into a component.
     const dirs = [
       "src/app/[locale]/buyer",
       "src/app/[locale]/seller",
+      "src/app/[locale]/admin",
+      "src/app/[locale]/analyst",
+      "src/app/[locale]/partner",
       "src/components/buyer",
       "src/components/seller",
+      "src/components/admin",
+      "src/components/analyst",
     ];
     // JSX text nodes and placeholder/aria-label attributes holding English prose.
     const JSX_TEXT = />\s*([A-Z][A-Za-z0-9][^<>{}\n]{6,})\s*</;

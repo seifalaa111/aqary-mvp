@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Button, Callout, Card, CardBody, Field, Input, Select, Textarea, cn } from "@/components/ui/primitives";
 import { Badge } from "@/components/ui/badges";
@@ -43,6 +44,7 @@ export function PolicyLibrary({
 }) {
   const router = useRouter();
   const isAr = locale === "ar";
+  const tk = useTranslations("consoleUi");
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [error, setError] = useState<string | null>(null);
@@ -164,8 +166,8 @@ export function PolicyLibrary({
                         onChange={(e) => set("assignmentAllowed", e.target.value)}
                       >
                         <option value="ALLOWED">Allowed</option>
-                        <option value="CONDITIONAL">Conditional</option>
-                        <option value="NOT_ALLOWED">Not allowed</option>
+                        <option value="CONDITIONAL">{tk("conditional")}</option>
+                        <option value="NOT_ALLOWED">{tk("notAllowed")}</option>
                         <option value="UNKNOWN">Unknown</option>
                       </Select>
                     </Field>
@@ -294,9 +296,7 @@ export function PolicyLibrary({
                           }
                         })
                       }
-                    >
-                      Save policy
-                    </Button>
+                    >{tk("savePolicy")}</Button>
                     <Button variant="ghost" onClick={() => setEditing(null)}>
                       Cancel
                     </Button>

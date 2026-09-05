@@ -85,6 +85,7 @@ export function DecisionPanel({
   pending: boolean;
 }) {
   const t = useTranslations("analyst");
+  const tk = useTranslations("consoleUi");
   const isAr = locale === "ar";
   const [mode, setMode] = useState<"none" | "info" | "reject">("none");
   const [selected, setSelected] = useState<string[]>([]);
@@ -174,7 +175,7 @@ export function DecisionPanel({
           </ul>
           <Textarea
             rows={2}
-            placeholder="Anything else, in your own words"
+            placeholder={tk("anythingElsePlaceholder")}
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
@@ -191,9 +192,7 @@ export function DecisionPanel({
                 setSelected([]);
                 setNote("");
               }}
-            >
-              Send the request
-            </Button>
+            >{tk("sendTheRequest")}</Button>
             <Button variant="ghost" onClick={() => setMode("none")}>
               Cancel
             </Button>
@@ -231,7 +230,7 @@ export function DecisionPanel({
       {/* ---- Context ---- */}
       {policy ? (
         <section className="rounded-md border border-rule bg-paper-sunken/50 p-4">
-          <p className="eyebrow mb-2">Developer assignment policy</p>
+          <p className="eyebrow mb-2">{tk("developerAssignmentPolicy")}</p>
           <dl className="rule-t text-xs">
             <Row label="Assignment" value={policy.assignmentAllowed.replace(/_/g, " ").toLowerCase()} />
             <Row
@@ -246,7 +245,7 @@ export function DecisionPanel({
             <Row label="Min months" value={policy.minMonthsElapsed ? String(policy.minMonthsElapsed) : "—"} />
             <Row label="NOC turnaround" value={policy.typicalNocDays ? `${policy.typicalNocDays} days` : "—"} />
           </dl>
-          <p className="eyebrow mb-1 mt-3">Documents the developer requires</p>
+          <p className="eyebrow mb-1 mt-3">{tk("documentsDeveloperRequires")}</p>
           <ul className="flex flex-col gap-1">
             {policy.requiredDocuments.map((d) => (
               <li key={d} className="text-2xs text-ink-50">
@@ -260,7 +259,7 @@ export function DecisionPanel({
       {extractionMeta ? (
         <section className="rounded-md border border-rule bg-paper-sunken/50 p-4">
           <div className="mb-2 flex items-center gap-2">
-            <p className="eyebrow">Extraction run</p>
+            <p className="eyebrow">{tk("extractionRun")}</p>
             <Badge tone={extractionMeta.mode === "LIVE" ? "verified" : "info"}>
               {extractionMeta.mode.toLowerCase()}
             </Badge>

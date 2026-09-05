@@ -86,6 +86,7 @@ export function PoliciesManager({
   const [editError, setEditError] = useState<string | null>(null);
 
   const t = useTranslations("admin");
+  const tk = useTranslations("consoleUi");
   const isAr = locale === "ar";
 
   const filtered = rows.filter((r) => {
@@ -197,11 +198,11 @@ export function PoliciesManager({
 
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-2xs text-ink-50 block">Assignment:</span>
+                        <span className="text-2xs text-ink-50 block">{tk("assignmentLabel")}</span>
                         <span className="font-medium text-ink">{v.assignmentAllowed}</span>
                       </div>
                       <div>
-                        <span className="text-2xs text-ink-50 block">Fee Model:</span>
+                        <span className="text-2xs text-ink-50 block">{tk("feeModelLabel")}</span>
                         <span className="font-medium text-ink">
                           {v.feeType === "PERCENT" && v.feePercentBps
                             ? `${(v.feePercentBps / 100).toFixed(1)}%`
@@ -211,20 +212,20 @@ export function PoliciesManager({
                         </span>
                       </div>
                       <div>
-                        <span className="text-2xs text-ink-50 block">Min Paid:</span>
+                        <span className="text-2xs text-ink-50 block">{tk("minPaidLabel")}</span>
                         <span className="font-medium text-ink">
                           {v.minPercentPaidBps ? `${(v.minPercentPaidBps / 100).toFixed(0)}%` : "—"}
                         </span>
                       </div>
                       <div>
-                        <span className="text-2xs text-ink-50 block">NOC Days:</span>
+                        <span className="text-2xs text-ink-50 block">{tk("nocDaysLabel")}</span>
                         <span className="font-medium text-ink">{v.typicalNocDays ? `${v.typicalNocDays}d` : "—"}</span>
                       </div>
                     </div>
 
                     {v.changeReason && (
                       <div className="bg-paper-raised p-2 rounded-sm text-2xs text-ink-70 border border-rule/60">
-                        <span className="font-semibold text-ink">Change Reason: </span>
+                        <span className="font-semibold text-ink">{tk("changeReasonLabel")}</span>
                         {v.changeReason}
                       </div>
                     )}
@@ -232,9 +233,7 @@ export function PoliciesManager({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-ink-50 text-center py-8">
-                No archived historical versions for this policy yet.
-              </p>
+              <p className="text-xs text-ink-50 text-center py-8">{tk("noPolicyVersions")}</p>
             )}
           </div>
         </div>
@@ -247,15 +246,13 @@ export function PoliciesManager({
             <h2 className="font-display text-lg text-ink">
               {editingRow.policy ? "Edit Policy & Create Version" : "Initialize Developer Policy"}
             </h2>
-            <p className="text-xs text-ink-50">
-              Editing this policy creates an immutable historical version snapshot. All changes must include an operational justification.
-            </p>
+            <p className="text-xs text-ink-50">{tk("policyEditExplainer")}</p>
 
             {editError && <p className="text-xs text-flagged">{editError}</p>}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-2xs font-medium text-ink-70 mb-1">Assignment Allowed</label>
+                <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("assignmentAllowed")}</label>
                 <Select value={assignmentAllowed} onChange={(e) => setAssignmentAllowed(e.target.value as AssignmentPermission)}>
                   <option value="ALLOWED">ALLOWED</option>
                   <option value="NOT_ALLOWED">NOT_ALLOWED</option>
@@ -265,7 +262,7 @@ export function PoliciesManager({
               </div>
 
               <div>
-                <label className="block text-2xs font-medium text-ink-70 mb-1">Fee Type</label>
+                <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("feeType")}</label>
                 <Select value={feeType} onChange={(e) => setFeeType(e.target.value as FeeType)}>
                   <option value="PERCENT">PERCENT (%)</option>
                   <option value="FIXED">FIXED AMOUNT (EGP)</option>
@@ -277,37 +274,37 @@ export function PoliciesManager({
             <div className="grid grid-cols-2 gap-3">
               {feeType === "PERCENT" ? (
                 <div>
-                  <label className="block text-2xs font-medium text-ink-70 mb-1">Fee Percentage (bps, 250 = 2.5%)</label>
+                  <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("feePercentBps")}</label>
                   <Input value={feePercentBps} onChange={(e) => setFeePercentBps(e.target.value)} type="number" />
                 </div>
               ) : feeType === "FIXED" ? (
                 <div>
-                  <label className="block text-2xs font-medium text-ink-70 mb-1">Fixed Fee (EGP)</label>
+                  <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("fixedFee")}</label>
                   <Input value={feeFixedAmount} onChange={(e) => setFeeFixedAmount(e.target.value)} type="number" />
                 </div>
               ) : null}
 
               <div>
-                <label className="block text-2xs font-medium text-ink-70 mb-1">Min Paid (bps, 3000 = 30%)</label>
+                <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("minPaidBps")}</label>
                 <Input value={minPercentPaidBps} onChange={(e) => setMinPercentPaidBps(e.target.value)} type="number" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-2xs font-medium text-ink-70 mb-1">Min Months Elapsed</label>
+                <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("minMonthsElapsed")}</label>
                 <Input value={minMonthsElapsed} onChange={(e) => setMinMonthsElapsed(e.target.value)} type="number" />
               </div>
 
               <div>
-                <label className="block text-2xs font-medium text-ink-70 mb-1">Typical NOC Turnaround (Days)</label>
+                <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("typicalNocDays")}</label>
                 <Input value={typicalNocDays} onChange={(e) => setTypicalNocDays(e.target.value)} type="number" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-2xs font-medium text-ink-70 mb-1">Policy Source</label>
+                <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("policySource")}</label>
                 <Select value={source} onChange={(e) => setSource(e.target.value as PolicySource)}>
                   <option value="OFFICIAL_LETTER">OFFICIAL_LETTER</option>
                   <option value="DEVELOPER_PORTAL">DEVELOPER_PORTAL</option>
@@ -318,7 +315,7 @@ export function PoliciesManager({
               </div>
 
               <div>
-                <label className="block text-2xs font-medium text-ink-70 mb-1">Verification State</label>
+                <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("verificationState")}</label>
                 <Select value={verificationState} onChange={(e) => setVerificationState(e.target.value as PolicyVerificationState)}>
                   <option value="VERIFIED">VERIFIED</option>
                   <option value="PENDING_CONFIRMATION">PENDING_CONFIRMATION</option>
@@ -328,14 +325,12 @@ export function PoliciesManager({
             </div>
 
             <div>
-              <label className="block text-2xs font-medium text-ink-70 mb-1">
-                Change Reason (Mandatory for version audit, min 8 characters)
-              </label>
+              <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("changeReason8")}</label>
               <Textarea
                 rows={3}
                 value={changeReason}
                 onChange={(e) => setChangeReason(e.target.value)}
-                placeholder="Explain why this developer assignment policy was updated or verified..."
+                placeholder={tk("policyReasonPlaceholder")}
               />
             </div>
 
@@ -349,9 +344,7 @@ export function PoliciesManager({
                 loading={pending}
                 disabled={changeReason.trim().length < 8}
                 onClick={handleSavePolicy}
-              >
-                Save & Snapshot Version
-              </Button>
+              >{tk("saveAndSnapshot")}</Button>
             </div>
           </div>
         </div>
@@ -362,11 +355,11 @@ export function PoliciesManager({
         <table className="w-full min-w-[960px] border-collapse bg-paper-raised text-sm">
           <thead>
             <tr className="border-b border-rule bg-paper-sunken/70">
-              <th className="p-3 text-start text-xs font-medium text-ink-50">Developer</th>
-              <th className="p-3 text-start text-xs font-medium text-ink-50">Assignment Terms</th>
-              <th className="p-3 text-start text-xs font-medium text-ink-50">Fee Model</th>
-              <th className="p-3 text-center text-xs font-medium text-ink-50">NOC Timeline</th>
-              <th className="p-3 text-center text-xs font-medium text-ink-50">Verification State</th>
+              <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("developer")}</th>
+              <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("assignmentTerms")}</th>
+              <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("feeModel")}</th>
+              <th className="p-3 text-center text-xs font-medium text-ink-50">{tk("nocTimeline")}</th>
+              <th className="p-3 text-center text-xs font-medium text-ink-50">{tk("verificationState")}</th>
               <th className="p-3 text-center text-xs font-medium text-ink-50">History</th>
               <th className="p-3 text-end text-xs font-medium text-ink-50">Actions</th>
             </tr>
@@ -405,7 +398,7 @@ export function PoliciesManager({
                         )}
                       </div>
                     ) : (
-                      <span className="text-2xs text-ink-30">No policy</span>
+                      <span className="text-2xs text-ink-30">{tk("noPolicy")}</span>
                     )}
                   </td>
 

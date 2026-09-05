@@ -82,6 +82,7 @@ export function QueueView({
   const [pending, startTransition] = useTransition();
 
   const t = useTranslations("analyst");
+  const tk = useTranslations("consoleUi");
   const isAr = locale === "ar";
 
   const mineCount = items.filter((i) => i.assignedAnalyst?.id === userId).length;
@@ -207,19 +208,19 @@ export function QueueView({
         <div className="w-44">
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="ALL">{labels.all} (Status)</option>
-            <option value="PENDING_REVIEW">Pending Review</option>
-            <option value="SUBMITTED">Submitted</option>
-            <option value="AI_PROCESSING">AI Processing</option>
-            <option value="INFO_REQUESTED">Info Requested</option>
-            <option value="VERIFIED">Verified</option>
+            <option value="PENDING_REVIEW">{tk("statusPendingReview")}</option>
+            <option value="SUBMITTED">{tk("statusSubmitted")}</option>
+            <option value="AI_PROCESSING">{tk("statusAiProcessing")}</option>
+            <option value="INFO_REQUESTED">{tk("statusInfoRequested")}</option>
+            <option value="VERIFIED">{tk("statusVerified")}</option>
           </Select>
         </div>
 
         <div className="w-44">
           <Select value={signalsFilter} onChange={(e) => setSignalsFilter(e.target.value)}>
             <option value="ALL">{labels.all} (Signals)</option>
-            <option value="CRITICAL">Critical Signals</option>
-            <option value="MAJOR">Major Signals</option>
+            <option value="CRITICAL">{tk("criticalSignals")}</option>
+            <option value="MAJOR">{tk("majorSignals")}</option>
             <option value="CLEAR">Clear</option>
           </Select>
         </div>
@@ -246,7 +247,7 @@ export function QueueView({
             <h2 className="font-display text-lg text-ink mb-4">{labels.reassign}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-ink-70 mb-1">Select Analyst</label>
+                <label className="block text-xs font-medium text-ink-70 mb-1">{tk("selectAnalyst")}</label>
                 <Select value={selectedAnalyst} onChange={(e) => setSelectedAnalyst(e.target.value)}>
                   <option value="">-- Choose an analyst --</option>
                   {analysts.map((a) => (
@@ -258,11 +259,11 @@ export function QueueView({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-ink-70 mb-1">Reason / Note</label>
+                <label className="block text-xs font-medium text-ink-70 mb-1">{tk("reasonNote")}</label>
                 <Input
                   value={reassignReason}
                   onChange={(e) => setReassignReason(e.target.value)}
-                  placeholder="e.g. Workload rebalancing"
+                  placeholder={tk("egWorkloadRebalancing")}
                 />
               </div>
 
@@ -284,9 +285,7 @@ export function QueueView({
                   loading={pending}
                   disabled={!selectedAnalyst}
                   onClick={() => handleReassign(reassigningId)}
-                >
-                  Confirm Reassign
-                </Button>
+                >{tk("confirmReassign")}</Button>
               </div>
             </div>
           </div>

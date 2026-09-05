@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button, Callout, Input, Textarea } from "@/components/ui/primitives";
 import { Badge } from "@/components/ui/badges";
 import { egp } from "@/lib/format";
@@ -39,13 +40,14 @@ export function ValuationReview({
   pending: boolean;
 }) {
   const isAr = locale === "ar";
+  const tk = useTranslations("consoleUi");
   const [editing, setEditing] = useState(false);
   const [low, setLow] = useState(valuation?.low ?? "");
   const [mid, setMid] = useState(valuation?.mid ?? "");
   const [high, setHigh] = useState(valuation?.high ?? "");
   const [reason, setReason] = useState("");
 
-  if (!valuation) return <p className="text-sm text-ink-50">No valuation computed yet.</p>;
+  if (!valuation) return <p className="text-sm text-ink-50">{tk("noValuation")}</p>;
 
   return (
     <div className="flex flex-col gap-5">
@@ -74,7 +76,7 @@ export function ValuationReview({
         ) : null}
         {valuation.overrideReason ? (
           <div className="mt-3">
-            <Callout tone="info" title="Analyst override on record">
+            <Callout tone="info" title={tk("analystOverrideOnRecord")}>
               {valuation.overrideReason}
             </Callout>
           </div>
@@ -82,7 +84,7 @@ export function ValuationReview({
       </div>
 
       <section>
-        <h3 className="mb-2 text-sm font-semibold text-ink">What moves this number</h3>
+        <h3 className="mb-2 text-sm font-semibold text-ink">{tk("whatMovesThisNumber")}</h3>
         <ul className="rule-t">
           {valuation.drivers.map((d) => (
             <li key={d.labelEn} className="rule-b flex items-baseline justify-between gap-3 py-2">
@@ -100,7 +102,7 @@ export function ValuationReview({
       </section>
 
       <section>
-        <h3 className="mb-2 text-sm font-semibold text-ink">Comparables</h3>
+        <h3 className="mb-2 text-sm font-semibold text-ink">{tk("comparables")}</h3>
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full min-w-[460px] border-collapse text-xs">
             <thead>
@@ -135,11 +137,11 @@ export function ValuationReview({
           <div className="grid grid-cols-3 gap-2">
             <Input className="money" value={low} onChange={(e) => setLow(e.target.value)} placeholder="Low" />
             <Input className="money" value={mid} onChange={(e) => setMid(e.target.value)} placeholder="Mid" />
-            <Input className="money" value={high} onChange={(e) => setHigh(e.target.value)} placeholder="High" />
+            <Input className="money" value={high} onChange={(e) => setHigh(e.target.value)} placeholder={tk("high")} />
           </div>
           <Textarea
             rows={2}
-            placeholder="Reason (required, on the record)"
+            placeholder={tk("reasonOnRecord")}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
@@ -152,18 +154,14 @@ export function ValuationReview({
                 onOverride(low, mid, high, reason);
                 setEditing(false);
               }}
-            >
-              Save override
-            </Button>
+            >{tk("saveOverride")}</Button>
             <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
               Cancel
             </Button>
           </div>
         </div>
       ) : (
-        <Button size="sm" variant="secondary" className="self-start" onClick={() => setEditing(true)}>
-          Override the valuation
-        </Button>
+        <Button size="sm" variant="secondary" className="self-start" onClick={() => setEditing(true)}>{tk("overrideValuation")}</Button>
       )}
     </div>
   );

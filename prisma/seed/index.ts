@@ -2,6 +2,7 @@ import { PrismaClient, type ContractFieldKey, type PaymentFrequency, type Role }
 import bcrypt from "bcryptjs";
 import { Decimal } from "decimal.js";
 import { makeDemoNationalId } from "../../src/lib/domain/national-id.js";
+import { seedKycDocuments } from "./kyc-documents.js";
 import { runExtractionPipeline } from "../../src/lib/services/extraction.js";
 import { reconcileListing } from "../../src/lib/services/reconciliation.js";
 import { computeVerificationScore } from "../../src/lib/services/verification-score.js";
@@ -507,6 +508,11 @@ async function createPerson(
         proofOfFundsVerifiedAt: b.tier === "PRIORITY" ? new Date() : null,
       },
     });
+
+    // A buyer is created VERIFIED, so the evidence an analyst would have looked
+    // at has to exist. Without it the verification screen shows a VERIFIED badge
+    // over a checklist of nothing but "Missing".
+    await seedKycDocuments(prisma, user);
   }
 
   return user;
@@ -783,6 +789,10 @@ async function wipe() {
   // Storage is regenerated from scratch on every seed.
   const { rm } = await import("node:fs/promises");
   await rm("storage/listings", { recursive: true, force: true }).catch(() => undefined);
+  // Buyer KYC evidence lives under the owner, not a listing. Clearing it with
+  // everything else keeps ./storage and the database one artifact — otherwise a
+  // reseed leaves the previous run's identity documents orphaned on disk.
+  await rm("storage/users", { recursive: true, force: true }).catch(() => undefined);
   await rm("public/media/plans", { recursive: true, force: true }).catch(() => undefined);
 }
 

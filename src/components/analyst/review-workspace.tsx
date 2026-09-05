@@ -100,6 +100,7 @@ export function ReviewWorkspace(props: WorkspaceProps) {
   const t = useTranslations("analyst");
   const tl = useTranslations("fieldLabel");
   const td = useTranslations("docType");
+  const tk = useTranslations("consoleUi");
   const router = useRouter();
   const isAr = locale === "ar";
 
@@ -296,9 +297,7 @@ export function ReviewWorkspace(props: WorkspaceProps) {
             variant="ghost"
             className="text-flagged hover:text-flagged hover:bg-flagged-soft/20"
             onClick={() => setEscalating(true)}
-          >
-            Escalate file
-          </Button>
+          >{tk("escalateFile")}</Button>
 
           <Button
             size="sm"
@@ -310,9 +309,7 @@ export function ReviewWorkspace(props: WorkspaceProps) {
                 router.refresh();
               })
             }
-          >
-            Re-run analysis
-          </Button>
+          >{tk("rerunAnalysis")}</Button>
         </div>
       </header>
 
@@ -366,9 +363,7 @@ export function ReviewWorkspace(props: WorkspaceProps) {
               )}
             </>
           ) : (
-            <div className="rounded-lg border border-dashed border-rule-strong p-10 text-center text-sm text-ink-50">
-              No documents on this file.
-            </div>
+            <div className="rounded-lg border border-dashed border-rule-strong p-10 text-center text-sm text-ink-50">{tk("noDocumentsOnFile")}</div>
           )}
         </section>
 
@@ -532,9 +527,7 @@ export function ReviewWorkspace(props: WorkspaceProps) {
                                 setFlagSourceB("AI_EXTRACTED");
                                 setFlagNotes("");
                               }}
-                            >
-                              Flag discrepancy
-                            </Button>
+                            >{tk("flagDiscrepancy")}</Button>
 
                             <Button
                               size="sm"
@@ -555,29 +548,29 @@ export function ReviewWorkspace(props: WorkspaceProps) {
                             <p className="text-2xs font-medium text-ink-70">Flag discrepancy on {f.key}</p>
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <label className="text-2xs text-ink-50 block mb-0.5">Source A</label>
+                                <label className="text-2xs text-ink-50 block mb-0.5">{tk("sourceA")}</label>
                                 <Select value={flagSourceA} onChange={(e) => setFlagSourceA(e.target.value)}>
-                                  <option value="SELLER_DECLARED">Seller Declared</option>
-                                  <option value="AI_EXTRACTED">AI Extracted</option>
-                                  <option value="RECEIPT_VERIFIED">Receipt Verified</option>
-                                  <option value="DEVELOPER_CONFIRMED">Developer Confirmed</option>
+                                  <option value="SELLER_DECLARED">{tk("srcSellerDeclared")}</option>
+                                  <option value="AI_EXTRACTED">{tk("srcAiExtracted")}</option>
+                                  <option value="RECEIPT_VERIFIED">{tk("srcReceiptVerified")}</option>
+                                  <option value="DEVELOPER_CONFIRMED">{tk("srcDeveloperConfirmed")}</option>
                                 </Select>
                               </div>
                               <div>
-                                <label className="text-2xs text-ink-50 block mb-0.5">Source B</label>
+                                <label className="text-2xs text-ink-50 block mb-0.5">{tk("sourceB")}</label>
                                 <Select value={flagSourceB} onChange={(e) => setFlagSourceB(e.target.value)}>
-                                  <option value="SELLER_DECLARED">Seller Declared</option>
-                                  <option value="AI_EXTRACTED">AI Extracted</option>
-                                  <option value="RECEIPT_VERIFIED">Receipt Verified</option>
-                                  <option value="DEVELOPER_CONFIRMED">Developer Confirmed</option>
+                                  <option value="SELLER_DECLARED">{tk("srcSellerDeclared")}</option>
+                                  <option value="AI_EXTRACTED">{tk("srcAiExtracted")}</option>
+                                  <option value="RECEIPT_VERIFIED">{tk("srcReceiptVerified")}</option>
+                                  <option value="DEVELOPER_CONFIRMED">{tk("srcDeveloperConfirmed")}</option>
                                 </Select>
                               </div>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <label className="text-2xs text-ink-50 block mb-0.5">Severity</label>
+                                <label className="text-2xs text-ink-50 block mb-0.5">{tk("severity")}</label>
                                 <Select value={flagSeverity} onChange={(e) => setFlagSeverity(e.target.value as never)}>
-                                  <option value="CRITICAL">Critical</option>
+                                  <option value="CRITICAL">{tk("critical")}</option>
                                   <option value="MAJOR">Major</option>
                                   <option value="MINOR">Minor</option>
                                   <option value="INFO">Info</option>
@@ -588,13 +581,13 @@ export function ReviewWorkspace(props: WorkspaceProps) {
                                 <Input
                                   value={flagTitle}
                                   onChange={(e) => setFlagTitle(e.target.value)}
-                                  placeholder="Summary of mismatch"
+                                  placeholder={tk("summaryOfMismatch")}
                                 />
                               </div>
                             </div>
                             <Textarea
                               rows={2}
-                              placeholder="Notes and rationale"
+                              placeholder={tk("notesAndRationale")}
                               value={flagNotes}
                               onChange={(e) => setFlagNotes(e.target.value)}
                             />
@@ -624,9 +617,7 @@ export function ReviewWorkspace(props: WorkspaceProps) {
                                     }
                                   });
                                 }}
-                              >
-                                Create Discrepancy
-                              </Button>
+                              >{tk("createDiscrepancy")}</Button>
                               <Button size="sm" variant="ghost" onClick={() => setFlaggingField(null)}>
                                 Cancel
                               </Button>
@@ -676,9 +667,7 @@ export function ReviewWorkspace(props: WorkspaceProps) {
                                     }
                                   });
                                 }}
-                              >
-                                Save override
-                              </Button>
+                              >{tk("saveOverride")}</Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -839,26 +828,24 @@ export function ReviewWorkspace(props: WorkspaceProps) {
       {escalating && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg border border-rule bg-paper-raised p-6 shadow-xl">
-            <h2 className="font-display text-lg text-ink mb-2">Escalate Listing</h2>
-            <p className="text-xs text-ink-50 mb-4">
-              Escalating flags this listing for urgent supervisory or administrative attention.
-            </p>
+            <h2 className="font-display text-lg text-ink mb-2">{tk("escalateListing")}</h2>
+            <p className="text-xs text-ink-50 mb-4">{tk("escalateExplainer")}</p>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-ink-70 mb-1">Urgency</label>
                 <Select value={escalateUrgency} onChange={(e) => setEscalateUrgency(e.target.value as never)}>
-                  <option value="HIGH">High (Immediate intervention)</option>
-                  <option value="MEDIUM">Medium (Policy ambiguity)</option>
-                  <option value="LOW">Low (Routine verification question)</option>
+                  <option value="HIGH">{tk("urgencyHigh")}</option>
+                  <option value="MEDIUM">{tk("urgencyMedium")}</option>
+                  <option value="LOW">{tk("urgencyLow")}</option>
                 </Select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink-70 mb-1">Reason (min 10 characters)</label>
+                <label className="block text-xs font-medium text-ink-70 mb-1">{tk("reason10")}</label>
                 <Textarea
                   rows={3}
                   value={escalateReason}
                   onChange={(e) => setEscalateReason(e.target.value)}
-                  placeholder="Explain why this listing requires supervisor or legal escalation..."
+                  placeholder={tk("escalateReasonPlaceholder")}
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
@@ -885,9 +872,7 @@ export function ReviewWorkspace(props: WorkspaceProps) {
                       }
                     });
                   }}
-                >
-                  Confirm Escalation
-                </Button>
+                >{tk("confirmEscalation")}</Button>
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import type { JobStatus } from "@prisma/client";
 import { Button, cn } from "@/components/ui/primitives";
@@ -39,6 +40,7 @@ export function JobsManager({
   const [actionError, setActionError] = useState<string | null>(null);
 
   const isAr = locale === "ar";
+  const tk = useTranslations("consoleUi");
 
   const filtered = jobs.filter((j) => {
     if (statusFilter !== "ALL" && j.status !== statusFilter) return false;
@@ -109,9 +111,7 @@ export function JobsManager({
             </div>
 
             <div>
-              <p className="text-2xs text-ink-50 mb-1 font-semibold">
-                Sanitized Payload (Sensitive tokens, passwords and NIDs redacted):
-              </p>
+              <p className="text-2xs text-ink-50 mb-1 font-semibold">{tk("sanitizedPayload")}</p>
               <pre className="text-xs bg-paper-sunken p-3 rounded-md border border-rule overflow-x-auto text-ink-70 font-mono">
                 {JSON.stringify(inspectedJob.payload, null, 2)}
               </pre>
@@ -119,7 +119,7 @@ export function JobsManager({
 
             {inspectedJob.lastError && (
               <div>
-                <p className="text-2xs text-flagged mb-1 font-semibold">Execution Error Trace:</p>
+                <p className="text-2xs text-flagged mb-1 font-semibold">{tk("errorTrace")}</p>
                 <div className="p-2.5 bg-flagged-soft/40 border border-flagged/30 rounded text-xs text-flagged font-mono">
                   {inspectedJob.lastError}
                 </div>
@@ -136,9 +136,7 @@ export function JobsManager({
                     handleRetry(inspectedJob.id);
                     setInspectedJob(null);
                   }}
-                >
-                  Retry Now
-                </Button>
+                >{tk("retryNow")}</Button>
               )}
               <Button size="sm" variant="ghost" onClick={() => setInspectedJob(null)}>
                 Close
@@ -150,9 +148,7 @@ export function JobsManager({
 
       {/* Table */}
       {filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-rule p-12 text-center text-sm text-ink-50">
-          No jobs found for the selected status.
-        </div>
+        <div className="rounded-lg border border-dashed border-rule p-12 text-center text-sm text-ink-50">{tk("noJobsForStatus")}</div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-rule scrollbar-thin">
           <table className="w-full min-w-[900px] border-collapse bg-paper-raised text-sm">
@@ -160,9 +156,9 @@ export function JobsManager({
               <tr className="border-b border-rule bg-paper-sunken/70">
                 <th className="p-3 text-start text-xs font-medium text-ink-50">Type</th>
                 <th className="p-3 text-start text-xs font-medium text-ink-50">Status</th>
-                <th className="p-3 text-center text-xs font-medium text-ink-50">Attempts</th>
-                <th className="p-3 text-center text-xs font-medium text-ink-50">Duration</th>
-                <th className="p-3 text-start text-xs font-medium text-ink-50">Last Error</th>
+                <th className="p-3 text-center text-xs font-medium text-ink-50">{tk("attempts")}</th>
+                <th className="p-3 text-center text-xs font-medium text-ink-50">{tk("duration")}</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("lastError")}</th>
                 <th className="p-3 text-end text-xs font-medium text-ink-50">When</th>
                 <th className="p-3 text-end text-xs font-medium text-ink-50">Action</th>
               </tr>

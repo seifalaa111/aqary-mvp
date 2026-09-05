@@ -38,6 +38,7 @@ export function ReceiptsPanel({
   pending: boolean;
 }) {
   const t = useTranslations("analyst");
+  const tk = useTranslations("consoleUi");
   const [editing, setEditing] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
 
@@ -54,18 +55,18 @@ export function ReceiptsPanel({
   );
 
   if (receipts.length === 0) {
-    return <p className="text-sm text-ink-50">No receipts uploaded on this file.</p>;
+    return <p className="text-sm text-ink-50">{tk("noReceipts")}</p>;
   }
 
   return (
     <div className="flex flex-col gap-4">
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule">
         <div className="bg-paper-raised p-3">
-          <dt className="eyebrow mb-1">Verified total</dt>
+          <dt className="eyebrow mb-1">{tk("verifiedTotal")}</dt>
           <dd className="money text-money-sm font-semibold text-verified">{egp(totals.verified, { decimals: 0 })}</dd>
         </div>
         <div className="bg-paper-raised p-3">
-          <dt className="eyebrow mb-1">Still pending review</dt>
+          <dt className="eyebrow mb-1">{tk("stillPendingReview")}</dt>
           <dd className="money text-money-sm font-semibold text-pending">{egp(totals.pending, { decimals: 0 })}</dd>
         </div>
       </dl>
@@ -75,9 +76,9 @@ export function ReceiptsPanel({
           <thead>
             <tr className="rule-b">
               <th className="py-2 text-start text-xs font-medium text-ink-50">Date</th>
-              <th className="py-2 text-end text-xs font-medium text-ink-50">Declared</th>
+              <th className="py-2 text-end text-xs font-medium text-ink-50">{tk("declared")}</th>
               <th className="py-2 text-end text-xs font-medium text-ink-50">Read</th>
-              <th className="py-2 text-end text-xs font-medium text-ink-50">Verified</th>
+              <th className="py-2 text-end text-xs font-medium text-ink-50">{tk("statusVerified")}</th>
               <th className="py-2 text-center text-xs font-medium text-ink-50">Status</th>
               <th className="py-2 text-end text-xs font-medium text-ink-50">Action</th>
             </tr>

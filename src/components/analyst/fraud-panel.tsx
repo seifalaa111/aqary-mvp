@@ -33,6 +33,7 @@ export function FraudPanel({
   pending: boolean;
 }) {
   const t = useTranslations("analyst");
+  const tk = useTranslations("consoleUi");
   const isAr = locale === "ar";
   const [acting, setActing] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -129,9 +130,7 @@ export function FraudPanel({
                     </div>
                   </div>
                 ) : (
-                  <Button size="sm" variant="secondary" onClick={() => setActing(s.id)}>
-                    Disposition
-                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => setActing(s.id)}>{tk("disposition")}</Button>
                 )}
               </li>
             );
@@ -141,7 +140,7 @@ export function FraudPanel({
 
       {closed.length > 0 ? (
         <section>
-          <h3 className="mb-2 text-sm font-semibold text-ink">Closed signals</h3>
+          <h3 className="mb-2 text-sm font-semibold text-ink">{tk("closedSignals")}</h3>
           <ul className="rule-t">
             {closed.map((s) => (
               <li key={s.id} className="rule-b py-2.5">

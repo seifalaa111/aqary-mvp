@@ -57,6 +57,7 @@ export function UsersManager({
   const [revealed, setRevealed] = useState<Record<string, { nationalId: string | null; phone: string }>>({});
 
   const t = useTranslations("admin");
+  const tk = useTranslations("consoleUi");
   const isAr = locale === "ar";
 
   const filtered = users.filter((u) => {
@@ -226,8 +227,8 @@ export function UsersManager({
               <div>
                 <label className="block text-xs font-medium text-ink-70 mb-1">Action</label>
                 <Select value={roleAction} onChange={(e) => setRoleAction(e.target.value as "ADD" | "REMOVE")}>
-                  <option value="ADD">Grant Role (+)</option>
-                  <option value="REMOVE">Revoke Role (-)</option>
+                  <option value="ADD">{tk("grantRole")}</option>
+                  <option value="REMOVE">{tk("revokeRole")}</option>
                 </Select>
               </div>
               <div>
@@ -243,14 +244,12 @@ export function UsersManager({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-ink-70 mb-1">
-                Justification (Mandatory, min 8 characters)
-              </label>
+              <label className="block text-xs font-medium text-ink-70 mb-1">{tk("justification8")}</label>
               <Textarea
                 rows={3}
                 value={roleReason}
                 onChange={(e) => setRoleReason(e.target.value)}
-                placeholder="Reason for granting or revoking this permission..."
+                placeholder={tk("roleReasonPlaceholder")}
               />
             </div>
 
@@ -264,9 +263,7 @@ export function UsersManager({
                 loading={pending}
                 disabled={roleReason.trim().length < 8}
                 onClick={handleRoleSubmit}
-              >
-                Confirm Change
-              </Button>
+              >{tk("confirmChange")}</Button>
             </div>
           </div>
         </div>
@@ -282,11 +279,11 @@ export function UsersManager({
           <table className="w-full min-w-[960px] border-collapse bg-paper-raised text-sm">
             <thead>
               <tr className="border-b border-rule bg-paper-sunken/70">
-                <th className="p-3 text-start text-xs font-medium text-ink-50">User & Identity</th>
-                <th className="p-3 text-start text-xs font-medium text-ink-50">Assigned Roles</th>
-                <th className="p-3 text-start text-xs font-medium text-ink-50">KYC Status</th>
-                <th className="p-3 text-center text-xs font-medium text-ink-50">Buyer Tier</th>
-                <th className="p-3 text-center text-xs font-medium text-ink-50">Activity</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("userIdentity")}</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("assignedRoles")}</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("kycStatusLabel")}</th>
+                <th className="p-3 text-center text-xs font-medium text-ink-50">{tk("buyerTier")}</th>
+                <th className="p-3 text-center text-xs font-medium text-ink-50">{tk("activity")}</th>
                 <th className="p-3 text-end text-xs font-medium text-ink-50">Actions</th>
               </tr>
             </thead>
@@ -405,9 +402,7 @@ export function UsersManager({
                           setRoleReason("");
                           setRoleError(null);
                         }}
-                      >
-                        Edit Roles
-                      </Button>
+                      >{tk("editRoles")}</Button>
                     </td>
                   </tr>
                 );

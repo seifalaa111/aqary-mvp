@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Button, Callout, Card, CardBody, Input, cn } from "@/components/ui/primitives";
 import { Badge } from "@/components/ui/badges";
@@ -44,6 +45,7 @@ export interface UserRow {
  * and verify buyer funds capacity.
  */
 export function UserReview({ users, locale }: { users: UserRow[]; locale: string }) {
+  const tk = useTranslations("consoleUi");
   const router = useRouter();
   const [filter, setFilter] = useState("");
   const [revealed, setRevealed] = useState<string | null>(null);
@@ -86,7 +88,7 @@ export function UserReview({ users, locale }: { users: UserRow[]; locale: string
 
       <Input
         type="search"
-        placeholder="Filter by name, email, phone or role"
+        placeholder={tk("filterUsersPlaceholder")}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="max-w-sm"
@@ -159,9 +161,7 @@ export function UserReview({ users, locale }: { users: UserRow[]; locale: string
 
                 <div className="flex flex-wrap gap-1.5">
                   {u.kycStatus !== "VERIFIED" ? (
-                    <Button size="sm" loading={pending} onClick={() => act(() => reviewKyc({ userId: u.id, status: "VERIFIED" }))}>
-                      Verify KYC
-                    </Button>
+                    <Button size="sm" loading={pending} onClick={() => act(() => reviewKyc({ userId: u.id, status: "VERIFIED" }))}>{tk("verifyKyc")}</Button>
                   ) : null}
                   {u.kycStatus !== "REJECTED" ? (
                     <Button
@@ -182,9 +182,7 @@ export function UserReview({ users, locale }: { users: UserRow[]; locale: string
                         setPofCash(u.availableCash ?? "");
                         setPofInstallment(u.maxInstallment ?? "");
                       }}
-                    >
-                      Verify PoF
-                    </Button>
+                    >{tk("verifyPof")}</Button>
                   ) : null}
                 </div>
               </div>
@@ -192,18 +190,18 @@ export function UserReview({ users, locale }: { users: UserRow[]; locale: string
               {/* Proof of funds verification form */}
               {pofUserId === u.id ? (
                 <div className="rounded-md border border-brass/40 bg-brass/5 p-3">
-                  <p className="text-xs font-semibold text-ink">Verify Proof of Funds for Priority Tier</p>
+                  <p className="text-xs font-semibold text-ink">{tk("verifyPofPriority")}</p>
                   <div className="mt-2 flex flex-wrap gap-3">
                     <Input
                       type="number"
-                      placeholder="Verified Cash (EGP)"
+                      placeholder={tk("verifiedCashEgp")}
                       value={pofCash}
                       onChange={(e) => setPofCash(e.target.value)}
                       className="w-44"
                     />
                     <Input
                       type="number"
-                      placeholder="Verified Max Installment (EGP)"
+                      placeholder={tk("verifiedMaxInstallmentEgp")}
                       value={pofInstallment}
                       onChange={(e) => setPofInstallment(e.target.value)}
                       className="w-48"
@@ -220,9 +218,7 @@ export function UserReview({ users, locale }: { users: UserRow[]; locale: string
                           })
                         )
                       }
-                    >
-                      Confirm & Grant Priority
-                    </Button>
+                    >{tk("confirmGrantPriority")}</Button>
                     <Button size="sm" variant="ghost" onClick={() => setPofUserId(null)}>
                       Cancel
                     </Button>
@@ -289,9 +285,7 @@ export function UserReview({ users, locale }: { users: UserRow[]; locale: string
                               setReasonAction("NEEDS_REPLACEMENT");
                               setReasonText("");
                             }}
-                          >
-                            Need Replacement
-                          </Button>
+                          >{tk("needReplacement")}</Button>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -314,7 +308,7 @@ export function UserReview({ users, locale }: { users: UserRow[]; locale: string
                               <Input
                                 value={reasonText}
                                 onChange={(e) => setReasonText(e.target.value)}
-                                placeholder="e.g. Image blurry, expiration date passed, missing back side"
+                                placeholder={tk("egRejectionReason")}
                                 className="flex-1"
                               />
                               <Button

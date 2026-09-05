@@ -329,6 +329,7 @@ export async function buildListing(
 
   let receiptsPaid = new Decimal(0);
   let duplicateSourceBuffer: Buffer | null = null;
+  let duplicateSourceSvg: string | null = null;
 
   for (const [i, row] of uploadable.entries()) {
     const receiptNumber = `RC-${signingYear}-${String(10000 + plan.index * 97 + i)}`;
@@ -352,7 +353,10 @@ export async function buildListing(
     // The suspicious-receipt scenario: one receipt is the same file re-uploaded
     // under a different receipt number, which the fraud scan detects by hash.
     const isDuplicate = plan.scenario === "QUEUE_SUSPICIOUS_RECEIPT" && i === uploadable.length - 1;
-    if (plan.scenario === "QUEUE_SUSPICIOUS_RECEIPT" && i === 1) duplicateSourceBuffer = buf;
+    if (plan.scenario === "QUEUE_SUSPICIOUS_RECEIPT" && i === 1) {
+      duplicateSourceBuffer = buf;
+      duplicateSourceSvg = rendered.svg;
+    }
     if (isDuplicate && duplicateSourceBuffer) buf = duplicateSourceBuffer;
 
     const doc = await storeSinglePageDocument(prisma, {
@@ -361,6 +365,10 @@ export async function buildListing(
       type: "PAYMENT_RECEIPT",
       fileName: `${receiptNumber}.jpg`,
       buffer: buf,
+      // The duplicate re-uses an earlier receipt's bytes, so its page must carry
+      // that receipt's text, not this one's — otherwise the snippet would
+      // describe an image the page does not actually show.
+      svg: isDuplicate && duplicateSourceSvg ? duplicateSourceSvg : rendered.svg,
       // A receipt photographed on a phone that has been through an editor is a
       // signal, not a verdict — the analyst dispositions it.
       softwareTag:
@@ -424,6 +432,7 @@ export async function buildListing(
       type: "DEVELOPER_ACCOUNT_STATEMENT",
       fileName: `account-statement-${unitCode}.pdf`,
       buffer: await svgToWebp(statement.svg, 1240, 84),
+      svg: statement.svg,
       truth: { fields: statement.placed.map(toTruthField) },
     });
   }
@@ -431,12 +440,16 @@ export async function buildListing(
   // ---- Identity documents -------------------------------------------------
   if (!isDraft && !incomplete) {
     for (const type of ["NATIONAL_ID_FRONT", "NATIONAL_ID_BACK"] as DocumentType[]) {
+      const idCard = idCardSvg(plan, type === "NATIONAL_ID_FRONT");
       await storeSinglePageDocument(prisma, {
         listingId: listing.id,
         ownerId: plan.sellerId,
         type,
         fileName: `${type.toLowerCase()}.jpg`,
-        buffer: await svgToWebp(idCardSvg(plan, type === "NATIONAL_ID_FRONT"), 900, 80),
+        buffer: await svgToWebp(idCard, 900, 80),
+        // An identity card is a SENSITIVE_TYPE: its text is deliberately not
+        // recorded, so it can never reach the assistant's retrieval corpus.
+        svg: null,
         note: plan.sellerNameAr,
         truth: { fields: [] },
       });
@@ -497,6 +510,35 @@ interface TruthSidecar {
   quirks?: { lowConfidenceKeys?: ContractFieldKey[]; misreadKey?: ContractFieldKey; misreadFactor?: number };
 }
 
+/**
+ * The text actually drawn on a rendered page.
+ *
+ * These documents are SVG rendered to WebP, so the page's words are already in
+ * hand — pulling them out is transcription, not invention. It matters because
+ * `DocumentPage.textSnippet` is what the assistant retrieves against: with it
+ * null, the corpus is empty and the assistant can cite no page of any seeded
+ * file, which made a real retrieval pipeline look like a stub.
+ */
+function svgPageText(svg: string): string | null {
+  const parts: string[] = [];
+  const re = /<text[^>]*>([\s\S]*?)<\/text>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(svg)) !== null) {
+    const inner = m[1]!
+      .replace(/<[^>]+>/g, "")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (inner) parts.push(inner);
+  }
+  if (parts.length === 0) return null;
+  return parts.join("\n").slice(0, 4000);
+}
+
 async function storeMultiPageDocument(
   prisma: PrismaClient,
   args: {
@@ -549,6 +591,7 @@ async function storeMultiPageDocument(
         imageKey: pageKey,
         width: meta.width ?? 1240,
         height: meta.height ?? 1754,
+        textSnippet: svgPageText(args.pages[i]!),
       },
     });
   }
@@ -564,6 +607,8 @@ async function storeSinglePageDocument(
     type: DocumentType;
     fileName: string;
     buffer: Buffer;
+    /** Source markup, when the page was rendered from SVG — used for the text snippet. */
+    svg?: string | null;
     truth: TruthSidecar;
     softwareTag?: string | null;
     hasExif?: boolean;
@@ -606,7 +651,13 @@ async function storeSinglePageDocument(
       exifStripped: args.hasExif !== false,
       note: args.note ?? null,
       pages: {
-        create: { pageNumber: 1, imageKey: pageKey, width: meta.width ?? 900, height: meta.height ?? 1180 },
+        create: {
+          pageNumber: 1,
+          imageKey: pageKey,
+          width: meta.width ?? 900,
+          height: meta.height ?? 1180,
+          textSnippet: args.svg ? svgPageText(args.svg) : null,
+        },
       },
     },
   });

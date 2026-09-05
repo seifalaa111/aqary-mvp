@@ -450,28 +450,34 @@ standing in for one. It is flagged here, in `ASSETS.md` and in the site footer.
 - **`daysListed` reads as 0 on seeded listings** because they all publish during
   the seed run. It is computed from `publishedAt`, so it is correct — just
   uninteresting until the data ages.
-- **The staff console is English-only.** The public site and both transacting
-  surfaces — buyer and seller — are fully bilingual, and
-  `tests/unit/i18n-parity.test.ts` fails the build if English copy reappears
-  there. The analyst and admin consoles still carry ~159 English literals in
-  JSX. That is a scope decision, not an oversight: internal tooling is used by
-  staff we hire, the surfaces a customer must complete a transaction on are not.
-  The same test guards the console against the *bilingual ternary* pattern, so
-  the two catalogues stay at parity either way.
-- **Every seeded buyer is `kycStatus: VERIFIED` with no documents in the vault.**
-  The seed grants the status directly rather than manufacturing identity
-  documents it has no bytes for. The buyer's verification page states this
-  rather than showing a VERIFIED badge over a checklist of nothing but
-  "Missing". A real deployment reaches VERIFIED only through
-  `reviewKyc`, which requires an analyst and writes an audit event.
-- **`DocumentPage.textSnippet` is null on every seeded page.** The seed ships
-  image documents, and text extraction only runs for PDFs
-  (`src/lib/services/pdf.ts`, exercised against a real fixture in
-  `tests/unit/phase2-qualification-privacy.test.ts`). The consequence is that
-  the assistant's page corpus is empty for seeded listings: it answers from the
-  verified contract record, and cites no document pages until a PDF is uploaded.
-  The pipeline is real; the demo data does not exercise it.
-- **The OTP attempt check is read-then-write.** Two verification requests racing
-  can each observe `attempts < OTP_MAX_ATTEMPTS`. Brute-forcing a six-digit code
-  through that window is not practical, so it is left as-is rather than
-  serialised, but it is not a strict counter.
+- **The whole product is bilingual, staff surfaces included.** Public site,
+  buyer, seller, analyst, admin and the developer portal all read their copy
+  from `src/messages`. `tests/unit/i18n-parity.test.ts` fails the build on four
+  counts: a key present in one catalogue and not the other, an empty
+  translation, English prose welded into any role surface, and a literal key
+  that does not resolve against the namespace its variable is bound to — the
+  last of which catches a `MISSING_MESSAGE` that neither typecheck nor an
+  unrendered branch would show.
+- **The OTP attempt counter is a conditional update, not a read-then-write.**
+  The cap lives in the `WHERE` clause, so two racing guesses cannot each observe
+  `attempts < OTP_MAX_ATTEMPTS` and both get a free try. Claiming the code is
+  conditional on `usedAt: null` for the same reason: one code opens one session.
+- **Demo identity documents are drawn specimens.** A seeded buyer is created
+  `VERIFIED`, so the seed also creates the evidence an analyst would have
+  reviewed — national ID front and back and a proof of address, rendered and
+  stamped `SPECIMEN — DEMONSTRATION DATA`, stored under `users/<id>/kyc/` and
+  marked `APPROVED`. They are not photographs of anything and do not claim to
+  be. A real deployment reaches `VERIFIED` only through `reviewKyc`, which
+  requires an analyst and writes an audit event.
+- **Document page text is transcribed from the page, not invented.** These
+  documents are SVG rendered to WebP, so the words on a page are already in
+  hand; the seed records them in `DocumentPage.textSnippet`, which is what the
+  assistant retrieves against. Identity documents are excluded by design — a
+  `SENSITIVE_TYPE` carries no snippet, so its contents cannot enter the
+  retrieval corpus even for a viewer who is allowed to open the file itself.
+  `tests/unit/seed-fidelity.test.ts` asserts both halves.
+- **PDF text extraction runs only for actual PDFs.** `src/lib/services/pdf.ts`
+  handles uploads, and is exercised against a real fixture in
+  `tests/unit/phase2-qualification-privacy.test.ts`. The seed ships rendered
+  images rather than PDFs, so that path is proven by test rather than by the
+  demo data.

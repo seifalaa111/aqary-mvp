@@ -109,16 +109,33 @@ export async function verifyOtp(input: unknown): Promise<AuthResult> {
   });
   if (!otp) return { ok: false, error: "Request a new code", field: "code" };
   if (otp.expiresAt < new Date()) return { ok: false, error: "That code has expired", field: "code" };
-  if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+
+  // Spend the attempt before comparing, with the cap in the WHERE clause. Read
+  // the counter, compare, then write and two concurrent guesses each see
+  // `attempts < MAX` and both get a free try — the cap leaks under exactly the
+  // load an attacker would generate. A conditional update makes the database
+  // the arbiter: whoever loses the race gets count 0 and is refused.
+  const spent = await prisma.otpCode.updateMany({
+    where: { id: otp.id, usedAt: null, attempts: { lt: OTP_MAX_ATTEMPTS } },
+    data: { attempts: { increment: 1 } },
+  });
+  if (spent.count !== 1) {
     return { ok: false, error: "Too many attempts. Request a new code.", field: "code" };
   }
 
   if (otp.code !== parsed.data.code) {
-    await prisma.otpCode.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
     return { ok: false, error: "That code is not right", field: "code" };
   }
 
-  await prisma.otpCode.update({ where: { id: otp.id }, data: { usedAt: new Date() } });
+  // Claim the code. A second request carrying the same correct code finds
+  // usedAt already set and is refused, so one code opens exactly one session.
+  const claimed = await prisma.otpCode.updateMany({
+    where: { id: otp.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+  if (claimed.count !== 1) {
+    return { ok: false, error: "Request a new code", field: "code" };
+  }
 
   let user = await prisma.user.findUnique({ where: { phone } });
   const ip = await clientIp();

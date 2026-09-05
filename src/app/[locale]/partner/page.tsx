@@ -1,4 +1,4 @@
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { prisma } from "@/lib/db";
 import { requireDeveloperPartnerAccess } from "@/lib/auth/guard";
@@ -55,6 +55,7 @@ export default async function PartnerPage({ params }: { params: Promise<{ locale
   const blocked = active.filter((deal) => deal.milestones.some((milestone) => milestone.status === "BLOCKED"));
   const outstanding = active.reduce((sum, deal) => sum + Number(deal.listing.outstandingBalance ?? 0), 0);
   const isAr = locale === "ar";
+  const tk = await getTranslations({ locale, namespace: "consoleUi" });
 
   return (
     <WorkspaceShell
@@ -106,11 +107,11 @@ export default async function PartnerPage({ params }: { params: Promise<{ locale
               <table className="w-full min-w-[980px] border-collapse text-sm">
                 <thead className="bg-paper-sunken/60">
                   <tr className="rule-b">
-                    <th className="p-3 text-start text-2xs font-medium text-ink-50">Contract / unit</th>
-                    <th className="p-3 text-start text-2xs font-medium text-ink-50">Seller / buyer</th>
-                    <th className="p-3 text-end text-2xs font-medium text-ink-50">Paid / outstanding</th>
-                    <th className="p-3 text-start text-2xs font-medium text-ink-50">Next action</th>
-                    <th className="p-3 text-start text-2xs font-medium text-ink-50">Delivery</th>
+                    <th className="p-3 text-start text-2xs font-medium text-ink-50">{tk("contractUnit")}</th>
+                    <th className="p-3 text-start text-2xs font-medium text-ink-50">{tk("sellerBuyer")}</th>
+                    <th className="p-3 text-end text-2xs font-medium text-ink-50">{tk("paidOutstanding")}</th>
+                    <th className="p-3 text-start text-2xs font-medium text-ink-50">{tk("nextAction")}</th>
+                    <th className="p-3 text-start text-2xs font-medium text-ink-50">{tk("delivery")}</th>
                     <th className="p-3 text-end text-2xs font-medium text-ink-50">Opened</th>
                   </tr>
                 </thead>

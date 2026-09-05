@@ -37,6 +37,7 @@ export function MediaReview({
   pending: boolean;
 }) {
   const t = useTranslations("analyst");
+  const tk = useTranslations("consoleUi");
   const isAr = locale === "ar";
   const [noting, setNoting] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -113,7 +114,7 @@ export function MediaReview({
                 <div className="mt-2 flex flex-col gap-1.5">
                   <Input
                     className="h-8 text-xs"
-                    placeholder="Why?"
+                    placeholder={tk("whyPlaceholder")}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                   />

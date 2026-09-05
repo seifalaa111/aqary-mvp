@@ -47,6 +47,7 @@ export function AuditViewer({
   const [selectedEvent, setSelectedEvent] = useState<AuditEventRow | null>(null);
 
   const t = useTranslations("admin");
+  const tk = useTranslations("consoleUi");
   const isAr = locale === "ar";
 
   const go = (next: { action?: string; entity?: string; cursor?: string | null }) => {
@@ -148,7 +149,7 @@ export function AuditViewer({
                 </span>
               </div>
               <div>
-                <span className="text-2xs text-ink-50 block">Timestamp:</span>
+                <span className="text-2xs text-ink-50 block">{tk("timestampLabel")}</span>
                 <span className="text-ink">{formatDate(selectedEvent.at, locale)}</span>
               </div>
             </div>
@@ -156,13 +157,13 @@ export function AuditViewer({
             {/* Before and After Diffs */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <p className="text-2xs font-semibold text-ink-50 mb-1">State Before (FROM):</p>
+                <p className="text-2xs font-semibold text-ink-50 mb-1">{tk("stateBefore")}</p>
                 <pre className="text-[11px] bg-paper-sunken p-3 rounded-md border border-rule overflow-x-auto text-ink-70 font-mono max-h-56">
                   {selectedEvent.before ? JSON.stringify(selectedEvent.before, null, 2) : "null (initial creation)"}
                 </pre>
               </div>
               <div>
-                <p className="text-2xs font-semibold text-ink-50 mb-1">State After (TO):</p>
+                <p className="text-2xs font-semibold text-ink-50 mb-1">{tk("stateAfter")}</p>
                 <pre className="text-[11px] bg-paper-sunken p-3 rounded-md border border-rule overflow-x-auto text-ink-70 font-mono max-h-56">
                   {selectedEvent.after ? JSON.stringify(selectedEvent.after, null, 2) : "null (no change recorded)"}
                 </pre>
@@ -171,7 +172,7 @@ export function AuditViewer({
 
             {Boolean(selectedEvent.metadata) && (
               <div>
-                <p className="text-2xs font-semibold text-ink-50 mb-1">Metadata / Operational Justification (WHY):</p>
+                <p className="text-2xs font-semibold text-ink-50 mb-1">{tk("metadataWhy")}</p>
                 <pre className="text-[11px] bg-paper-sunken p-3 rounded-md border border-rule overflow-x-auto text-ink-70 font-mono">
                   {JSON.stringify(selectedEvent.metadata, null, 2)}
                 </pre>
@@ -189,18 +190,16 @@ export function AuditViewer({
 
       {/* Main Table */}
       {filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-rule p-12 text-center text-sm text-ink-50">
-          No audit events recorded for current filter criteria.
-        </div>
+        <div className="rounded-lg border border-dashed border-rule p-12 text-center text-sm text-ink-50">{tk("noAuditEvents")}</div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-rule scrollbar-thin">
           <table className="w-full min-w-[960px] border-collapse bg-paper-raised text-sm">
             <thead>
               <tr className="border-b border-rule bg-paper-sunken/70">
-                <th className="p-3 text-start text-xs font-medium text-ink-50">Action (WHAT)</th>
-                <th className="p-3 text-start text-xs font-medium text-ink-50">Actor (WHO)</th>
-                <th className="p-3 text-start text-xs font-medium text-ink-50">Target (TARGET)</th>
-                <th className="p-3 text-start text-xs font-medium text-ink-50">Reason / Details (WHY)</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("actionWhat")}</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("actorWho")}</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("targetLabel")}</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("reasonWhy")}</th>
                 <th className="p-3 text-end text-xs font-medium text-ink-50">When</th>
                 <th className="p-3 text-end text-xs font-medium text-ink-50">Diff</th>
               </tr>

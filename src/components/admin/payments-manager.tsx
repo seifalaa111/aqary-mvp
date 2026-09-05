@@ -60,6 +60,7 @@ export function PaymentsManager({
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   const t = useTranslations("admin");
+  const tk = useTranslations("consoleUi");
   const isAr = locale === "ar";
 
   const filtered = payments.filter((p) => {
@@ -186,25 +187,21 @@ export function PaymentsManager({
             </p>
 
             <div>
-              <label className="block text-2xs font-medium text-ink-70 mb-1">
-                Bank / Wire Transfer Reference (min 4 characters)
-              </label>
+              <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("bankRef4")}</label>
               <Input
                 value={exceptionRef}
                 onChange={(e) => setExceptionRef(e.target.value)}
-                placeholder="e.g. CIB-TXN-9842187"
+                placeholder={tk("egBankRef")}
               />
             </div>
 
             <div>
-              <label className="block text-2xs font-medium text-ink-70 mb-1">
-                Justification Note (Mandatory, min 10 characters)
-              </label>
+              <label className="block text-2xs font-medium text-ink-70 mb-1">{tk("justificationNote10")}</label>
               <Textarea
                 rows={3}
                 value={exceptionReason}
                 onChange={(e) => setExceptionReason(e.target.value)}
-                placeholder="Explain the operational clearance circumstances and bank verification..."
+                placeholder={tk("exceptionReasonPlaceholder")}
               />
             </div>
 
@@ -218,9 +215,7 @@ export function PaymentsManager({
                 loading={pending}
                 disabled={exceptionReason.trim().length < 10 || exceptionRef.trim().length < 4}
                 onClick={handleExceptionSubmit}
-              >
-                Confirm Exception Settlement
-              </Button>
+              >{tk("confirmException")}</Button>
             </div>
           </div>
         </div>
@@ -252,21 +247,21 @@ export function PaymentsManager({
                 <span className="font-bold text-ink">{inspected.status}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-ink-50">Provider Reference:</span>
+                <span className="text-ink-50">{tk("providerReference")}</span>
                 <span className="font-mono text-ink">{inspected.providerRef || "None"}</span>
               </div>
               {inspected.failureReason && (
                 <div className="pt-1 border-t border-rule">
-                  <span className="text-flagged block font-medium">Failure Reason:</span>
+                  <span className="text-flagged block font-medium">{tk("failureReason")}</span>
                   <span className="text-flagged text-2xs">{inspected.failureReason}</span>
                 </div>
               )}
             </div>
 
             <div>
-              <h3 className="text-xs font-semibold text-ink mb-2">Payment Event Log</h3>
+              <h3 className="text-xs font-semibold text-ink mb-2">{tk("paymentEventLog")}</h3>
               {inspected.events.length === 0 ? (
-                <p className="text-xs text-ink-50">No raw events recorded for this instruction.</p>
+                <p className="text-xs text-ink-50">{tk("noPaymentEvents")}</p>
               ) : (
                 <ul className="divide-y divide-rule border border-rule rounded-md bg-paper-sunken/20">
                   {inspected.events.map((e) => (
@@ -297,12 +292,12 @@ export function PaymentsManager({
           <table className="w-full min-w-[1000px] border-collapse bg-paper-raised text-sm">
             <thead>
               <tr className="border-b border-rule bg-paper-sunken/70">
-                <th className="p-3 text-start text-xs font-medium text-ink-50">Payment & Deal</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("paymentDeal")}</th>
                 <th className="p-3 text-start text-xs font-medium text-ink-50">Kind</th>
                 <th className="p-3 text-end text-xs font-medium text-ink-50">Amount</th>
-                <th className="p-3 text-start text-xs font-medium text-ink-50">Gateway & Ref</th>
+                <th className="p-3 text-start text-xs font-medium text-ink-50">{tk("gatewayRef")}</th>
                 <th className="p-3 text-center text-xs font-medium text-ink-50">Status</th>
-                <th className="p-3 text-center text-xs font-medium text-ink-50">Attempts</th>
+                <th className="p-3 text-center text-xs font-medium text-ink-50">{tk("attempts")}</th>
                 <th className="p-3 text-end text-xs font-medium text-ink-50">Actions</th>
               </tr>
             </thead>
@@ -387,9 +382,7 @@ export function PaymentsManager({
                             variant="ghost"
                             loading={pending}
                             onClick={() => handleReconcile(p)}
-                          >
-                            Reconcile
-                          </Button>
+                          >{tk("reconcile")}</Button>
                         )}
                         {p.status !== "SUCCEEDED" && (
                           <Button
@@ -400,9 +393,7 @@ export function PaymentsManager({
                               setExceptionReason("");
                               setExceptionRef("");
                             }}
-                          >
-                            Exception
-                          </Button>
+                          >{tk("exception")}</Button>
                         )}
                       </div>
                     </td>
