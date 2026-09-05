@@ -14,9 +14,16 @@ export default async function PartnerPage({ params }: { params: Promise<{ locale
   const { locale } = await params;
   setRequestLocale(locale);
   const access = await requireDeveloperPartnerAccess();
+  // requireDeveloperPartnerAccess returns null developerIds for ADMIN only — a
+  // partner with no active membership is rejected before reaching here. The
+  // role is re-asserted rather than inferred from the null, so a future change
+  // to the guard fails closed instead of quietly disclosing every tenant.
+  const isStaffViewer = access.user.roles.includes("ADMIN");
   const developerIds =
     access.developerIds ??
-    (await prisma.developer.findMany({ select: { id: true } })).map((developer) => developer.id);
+    (isStaffViewer
+      ? (await prisma.developer.findMany({ select: { id: true } })).map((developer) => developer.id)
+      : []);
   const [developers, deals] = await Promise.all([
     prisma.developer.findMany({
       where: { id: { in: developerIds } },

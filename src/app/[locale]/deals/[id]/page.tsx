@@ -51,7 +51,10 @@ export default async function DealPage({
                       nameEn: true,
                       nameAr: true,
                       city: true,
-                      developer: { select: { nameEn: true, policy: { select: { requiredDocuments: true, typicalNocDays: true } } } },
+                      // Name only. The policy terms this deal runs under come
+                      // from the snapshot frozen on the deal, not from whatever
+                      // the developer's policy happens to say today.
+                      developer: { select: { nameEn: true } },
                     },
                   },
                 },
@@ -83,6 +86,17 @@ export default async function DealPage({
   if (!deal) notFound();
 
   const trail = await auditTrail("Deal", id, 50);
+
+  // The policy terms in force when this deal opened. Stored as JSON on the deal
+  // so a later policy edit cannot rewrite an in-flight assignment's terms.
+  const snapshot = (deal.developerPolicySnapshot ?? {}) as {
+    requiredDocuments?: string[];
+    typicalNocDays?: number | null;
+  };
+  const policySnapshot = {
+    requiredDocuments: Array.isArray(snapshot.requiredDocuments) ? snapshot.requiredDocuments : [],
+    typicalNocDays: typeof snapshot.typicalNocDays === "number" ? snapshot.typicalNocDays : null,
+  };
 
   // Contact details stay masked until the reservation deposit clears.
   const contact = (u: { fullNameEn: string; phone: string; email: string | null }) =>
@@ -127,8 +141,12 @@ export default async function DealPage({
         deliveryDate: deal.listing.deliveryDate?.toISOString() ?? null,
         cover: (deal.listing.media[0]?.variants as { card?: string } | undefined)?.card ?? null,
         coverAlt: deal.listing.media[0]?.altEn ?? "",
-        requiredDocuments: deal.listing.contract.unit.project.developer.policy?.requiredDocuments ?? [],
-        nocDays: deal.listing.contract.unit.project.developer.policy?.typicalNocDays ?? null,
+        // Deal.developerPolicySnapshot is an immutable copy taken when the deal
+        // opened. Reading the live policy here let an admin policy edit
+        // retroactively change what an in-flight assignment requires — the
+        // exact silent rewrite the snapshot exists to prevent.
+        requiredDocuments: policySnapshot.requiredDocuments,
+        nocDays: policySnapshot.typicalNocDays,
         documents: deal.listing.documents,
       }}
       parties={{
