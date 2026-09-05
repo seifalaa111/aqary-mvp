@@ -285,7 +285,7 @@ SHOW_DEMO_BANNER=true
 on their review screen with results) and payment callbacks are resolved by the
 action that started them, so the demo works without a worker. `npm run worker`
 runs the queue continuously if you want it draining in the background; failures,
-retries and dead letters are visible at `/analyst/jobs` either way.
+retries and dead letters are visible at `/admin/jobs` either way (admin only).
 
 ---
 

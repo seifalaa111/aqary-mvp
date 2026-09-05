@@ -166,7 +166,7 @@ never knows which implementation it has.
 ### 2.6 Background jobs
 
 - A persisted `Job` table with an in-process runner: retry, exponential backoff,
-  dead-lettering and per-job status visible at `/analyst/jobs`. No Redis, no
+  dead-lettering and per-job status visible at `/admin/jobs`. No Redis, no
   BullMQ — deliberately, per the brief.
 - Extraction runs inline on submit (so the seller lands on their review screen
   with results) while remaining a job, so a failure retries and is visible.

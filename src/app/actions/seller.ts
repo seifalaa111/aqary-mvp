@@ -579,6 +579,10 @@ export async function submitForVerification(listingId: string): Promise<SellerRe
     // seller lands on their review screen with results, and it stays a job so a
     // failure retries and is visible in the ops console.
     const job = await enqueue("extraction.run", { listingId });
+    // Deliberately swallowed: runJobNow rethrows so ops callers can report a
+    // failure, but here the queue is the fallback. A failed inline run is
+    // already persisted with its error and retried by the worker, and the
+    // seller should still reach their review screen.
     await runJobNow(job.id).catch(() => undefined);
 
     const after = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });

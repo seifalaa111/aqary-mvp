@@ -6,6 +6,7 @@ import type { ContractFieldKey, Severity, ValueSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireRole, AuthorizationError } from "@/lib/auth/guard";
 import { audit } from "@/lib/audit";
+import { AUDIT_ACTIONS } from "@/lib/domain/audit-actions";
 import {
   approveAndPublish,
   dispositionFraudSignal,
@@ -179,6 +180,21 @@ export async function reassignListingAction(input: {
 }): Promise<AnalystResult> {
   try {
     const user = await requireRole("ANALYST", "ADMIN");
+
+    // A listing may only be handed to someone who can actually work it. Without
+    // this the field is a free-text foreign key and a file can be parked on a
+    // buyer's account, where it disappears from every analyst queue.
+    const target = await prisma.user.findUnique({
+      where: { id: input.newAnalystId },
+      select: { id: true, roles: true, deletedAt: true },
+    });
+    if (!target || target.deletedAt) {
+      return { ok: false, error: "That user does not exist" };
+    }
+    if (!target.roles.includes("ANALYST") && !target.roles.includes("ADMIN")) {
+      return { ok: false, error: "A listing can only be assigned to an analyst or an admin" };
+    }
+
     const before = await prisma.listing.findUniqueOrThrow({
       where: { id: input.listingId },
       select: { assignedAnalystId: true },
@@ -190,7 +206,7 @@ export async function reassignListingAction(input: {
     await audit({
       actorId: user.id,
       actorRole: user.activeRole,
-      action: "LISTING_STATUS_CHANGED",
+      action: AUDIT_ACTIONS.ADMIN_REASSIGN_ANALYST,
       entityType: "Listing",
       entityId: input.listingId,
       before: { assignedAnalystId: before.assignedAnalystId },

@@ -137,7 +137,7 @@ paths.
 Extraction runs inline on seller submit and payment callbacks resolve in the action that
 started them, so the demo works with no worker running. `npm run worker` drains the queue
 continuously; on Vercel `/api/jobs/drain` runs on a schedule as a retry net. Failures,
-retries and dead letters are visible at `/analyst/jobs` either way.
+retries and dead letters are visible at `/admin/jobs` either way (admin only).
 
 ## Known issue
 

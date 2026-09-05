@@ -17,6 +17,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
 
   const [
     backlogListings,
+    escalatedListings,
     slaBreachedListings,
     criticalDiscrepancies,
     openFraudSignals,
@@ -28,6 +29,20 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
     // Backlog
     prisma.listing.count({
       where: { status: { in: ["PENDING_REVIEW", "SUBMITTED", "AI_PROCESSING"] } },
+    }),
+    // Escalations raised by analysts, oldest first — a supervisor was asked for.
+    prisma.listing.findMany({
+      where: { escalatedAt: { not: null } },
+      select: {
+        id: true,
+        reference: true,
+        escalatedAt: true,
+        escalationReason: true,
+        escalatedBy: { select: { fullNameEn: true } },
+        contract: { select: { unit: { select: { unitCode: true, project: { select: { nameEn: true } } } } } },
+      },
+      take: 5,
+      orderBy: { escalatedAt: "asc" },
     }),
     // SLA Breaches
     prisma.listing.findMany({
@@ -141,7 +156,13 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
         <h2 id="attention-heading" className="eyebrow mb-3">
           {isAr ? "ما يتطلب اتخاذ إجراء فوري" : "What needs attention right now"}
         </h2>
-        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+          <AttentionCard
+            label={isAr ? "تصعيدات" : "Escalations"}
+            value={escalatedListings.length}
+            href="/analyst"
+            tone={escalatedListings.length > 0 ? "flagged" : "neutral"}
+          />
           <AttentionCard
             label={isAr ? "قيد المراجعة" : "Backlog"}
             value={backlogListings}

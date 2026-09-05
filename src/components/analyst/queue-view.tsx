@@ -27,6 +27,8 @@ export interface QueueListingItem {
   submittedAt: string | null;
   slaDueAt: string | null;
   overdue: boolean;
+  escalatedAt: string | null;
+  escalationReason: string | null;
   priority: number;
   assignedAnalyst: { id: string; name: string } | null;
 }
@@ -348,10 +350,15 @@ export function QueueView({
                   </td>
 
                   <td className="p-3 text-center">
-                    <div className="flex justify-center gap-1">
+                    <div className="flex flex-wrap justify-center gap-1">
+                      {item.escalatedAt && (
+                        <span title={item.escalationReason ?? undefined}>
+                          <Badge tone="flagged">{isAr ? "مُصعَّد" : "escalated"}</Badge>
+                        </span>
+                      )}
                       {item.criticalCount > 0 && <SeverityBadge severity="CRITICAL" />}
                       {item.majorCount > 0 && <SeverityBadge severity="MAJOR" />}
-                      {item.criticalCount === 0 && item.majorCount === 0 && (
+                      {!item.escalatedAt && item.criticalCount === 0 && item.majorCount === 0 && (
                         <span className="text-2xs text-ink-30">{labels.clear}</span>
                       )}
                     </div>

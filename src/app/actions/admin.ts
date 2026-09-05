@@ -6,6 +6,8 @@ import type { ListingStatus, PolicySource, PolicyVerificationState, Role } from 
 import { prisma } from "@/lib/db";
 import { requireRole, AuthorizationError } from "@/lib/auth/guard";
 import { audit } from "@/lib/audit";
+import { AUDIT_ACTIONS } from "@/lib/domain/audit-actions";
+import { canTransition, checkPublishReadiness, transitionListing } from "@/lib/services/listings";
 import { retryJob } from "@/lib/services/jobs";
 import { retryPayment, reconcilePayment, recordPaymentException } from "@/lib/services/payments";
 
@@ -39,15 +41,46 @@ export async function adminOverrideListingStatus(input: {
       select: { id: true, status: true },
     });
 
-    const updated = await prisma.listing.update({
-      where: { id: input.listingId },
-      data: { status: input.targetStatus },
+    // An override is a shortcut through the state machine, not a hole in it.
+    // Admins may move a file along a legal edge without waiting for the actor
+    // who would normally do it — they may not invent an edge.
+    if (!canTransition(before.status, input.targetStatus)) {
+      return {
+        ok: false,
+        error: `Cannot move a listing from ${before.status} to ${input.targetStatus}`,
+      };
+    }
+
+    // Publication is the one transition an override must never grant. The
+    // publish gate is re-evaluated inside approveAndPublish precisely so that
+    // nothing can talk the server into listing an unverified file; an admin
+    // route around it would defeat the entire verification chain.
+    if (input.targetStatus === "LISTED" && before.status === "VERIFIED") {
+      const readiness = await checkPublishReadiness(input.listingId);
+      if (!readiness.ready) {
+        return {
+          ok: false,
+          error: `Publication is blocked by ${readiness.blockers.length} unmet condition(s): ${readiness.blockers
+            .map((b) => b.code)
+            .join(", ")}. Resolve them in the verification workbench and publish from there.`,
+        };
+      }
+    }
+
+    // transitionListing carries the compare-and-set guard, so two admins acting
+    // at once cannot both claim the same transition.
+    const updated = await transitionListing({
+      listingId: input.listingId,
+      to: input.targetStatus,
+      actorId: user.id,
+      actorRole: "ADMIN",
+      reason: input.reason.trim(),
     });
 
     await audit({
       actorId: user.id,
       actorRole: "ADMIN",
-      action: "ADMIN_OVERRIDE",
+      action: AUDIT_ACTIONS.ADMIN_OVERRIDE_LISTING_STATUS,
       entityType: "Listing",
       entityId: input.listingId,
       before: { status: before.status },
@@ -101,7 +134,7 @@ export async function adminReassignAnalyst(input: {
     await audit({
       actorId: user.id,
       actorRole: "ADMIN",
-      action: "ADMIN_OVERRIDE",
+      action: AUDIT_ACTIONS.ADMIN_REASSIGN_ANALYST,
       entityType: "Listing",
       entityId: input.listingId,
       before: { assignedAnalystId: before.assignedAnalystId },
@@ -223,7 +256,7 @@ export async function adminSavePolicyWithHistory(input: unknown): Promise<AdminR
         await audit({
           actorId: user.id,
           actorRole: "ADMIN",
-          action: "POLICY_UPDATED",
+          action: AUDIT_ACTIONS.POLICY_UPDATED,
           entityType: "DeveloperAssignmentPolicy",
           entityId: updated.id,
           before: {
@@ -278,7 +311,7 @@ export async function adminSavePolicyWithHistory(input: unknown): Promise<AdminR
         await audit({
           actorId: user.id,
           actorRole: "ADMIN",
-          action: "POLICY_UPDATED",
+          action: AUDIT_ACTIONS.POLICY_UPDATED,
           entityType: "DeveloperAssignmentPolicy",
           entityId: created.id,
           after: {
@@ -373,19 +406,71 @@ export async function adminRecordPaymentExceptionAction(input: {
 }
 
 // ---------------------------------------------------------------------------
+// 3b. Identity disclosure
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns one user's national ID and phone in the clear.
+ *
+ * The users table never ships these values to the browser — masking that
+ * happens in React is decoration, since the plaintext is sitting in the page
+ * payload either way. Unmasking is therefore a server round-trip, and every
+ * round-trip is a row in the audit trail naming the admin, the subject and the
+ * stated reason.
+ */
+export async function adminRevealUserIdentity(input: {
+  userId: string;
+  reason: string;
+}): Promise<AdminResult<{ nationalId: string | null; phone: string }>> {
+  try {
+    const user = await requireRole("ADMIN");
+    if (!input.reason || input.reason.trim().length < 8) {
+      return { ok: false, error: "A reason of at least 8 characters is required to reveal identity data" };
+    }
+
+    const target = await prisma.user.findUniqueOrThrow({
+      where: { id: input.userId },
+      select: { id: true, nationalId: true, phone: true },
+    });
+
+    await audit({
+      actorId: user.id,
+      actorRole: "ADMIN",
+      action: AUDIT_ACTIONS.USER_PII_REVEALED,
+      entityType: "User",
+      entityId: target.id,
+      metadata: {
+        reason: input.reason.trim(),
+        fields: ["nationalId", "phone"],
+      },
+    });
+
+    return { ok: true, data: { nationalId: target.nationalId, phone: target.phone } };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 4. Background Jobs Operations
 // ---------------------------------------------------------------------------
 
 export async function adminRetryJobAction(jobId: string): Promise<AdminResult> {
   try {
     const user = await requireRole("ADMIN");
-    await retryJob({
+    const job = await retryJob({
       jobId,
       actorId: user.id,
       actorRole: user.activeRole,
     });
 
     revalidatePath("/admin/jobs");
+    // A retry that ran and failed again is not a successful operation. Report
+    // the job's real post-run state so the console does not show green on a
+    // job that is still broken.
+    if (job.status === "DEAD" || job.status === "FAILED") {
+      return { ok: false, error: `Retry failed: ${job.lastError ?? "the job did not complete"}` };
+    }
     return { ok: true };
   } catch (err) {
     return fail(err);
@@ -436,7 +521,7 @@ export async function adminUpdateUserRoleAction(input: {
     await audit({
       actorId: user.id,
       actorRole: "ADMIN",
-      action: "ROLE_CHANGED",
+      action: AUDIT_ACTIONS.USER_ROLE_CHANGED,
       entityType: "User",
       entityId: input.userId,
       before: { roles: target.roles },

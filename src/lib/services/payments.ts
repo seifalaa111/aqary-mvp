@@ -330,15 +330,26 @@ export async function recordPaymentException(args: {
     throw new PaymentError("Payment has already succeeded", "ALREADY_PAID");
   }
 
-  const updated = await prisma.payment.update({
-    where: { id: args.paymentId },
+  // Same compare-and-set the provider callback uses: two admins recording the
+  // same offline settlement must not both write, or the deal picks up a
+  // duplicate event, a duplicate audit row and a second settledAt.
+  const won = await prisma.payment.updateMany({
+    where: { id: args.paymentId, status: { in: ["INITIATED", "PROCESSING", "FAILED"] } },
     data: {
       status: "SUCCEEDED",
       settledAt: new Date(),
-      providerRef: args.reference.trim(),
+      failureCode: null,
+      failureReason: null,
     },
   });
+  if (won.count !== 1) {
+    throw new PaymentError("This payment was settled by another operation", "ALREADY_SETTLED");
+  }
+  const updated = await prisma.payment.findUniqueOrThrow({ where: { id: args.paymentId } });
 
+  // The PSP reference is evidence of what the provider did and is what
+  // reconciliation queries later; the bank reference belongs to the event, not
+  // on top of it.
   await prisma.paymentEvent.create({
     data: {
       paymentId: args.paymentId,
@@ -362,6 +373,20 @@ export async function recordPaymentException(args: {
     await prisma.milestone.updateMany({
       where: { id: payment.milestoneId, status: { in: ["PENDING", "BLOCKED", "AT_RISK"] } },
       data: { status: "IN_PROGRESS", blockedReason: null },
+    });
+  }
+
+  // Money cleared, so the parties hear about it — an offline settlement must
+  // leave the deal in the same observable state as an online one.
+  for (const userId of [payment.deal.buyerId, payment.deal.sellerId]) {
+    await notify({
+      userId,
+      type: "PAYMENT_SUCCEEDED",
+      titleEn: `${KIND_LABELS[payment.kind]} cleared`,
+      titleAr: "تم تأكيد الدفع",
+      bodyEn: `EGP ${payment.amount.toString()} settled on ${payment.deal.reference} against external reference ${args.reference.trim()}.`,
+      bodyAr: `تم سداد ${payment.amount.toString()} جنيه.`,
+      linkHref: `/deals/${payment.dealId}`,
     });
   }
 

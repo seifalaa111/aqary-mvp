@@ -6,6 +6,19 @@ import { UsersManager, type AdminUserItem } from "@/components/admin/users-manag
 
 export const dynamic = "force-dynamic";
 
+/** Keeps the country prefix and the last two digits: enough to recognise a
+ *  record you already know, not enough to learn one you do not. */
+function maskPhone(phone: string): string {
+  if (phone.length <= 6) return "•".repeat(phone.length);
+  return phone.slice(0, 4) + " •••• " + phone.slice(-2);
+}
+
+function maskNationalId(nid: string | null): string | null {
+  if (!nid) return null;
+  if (nid.length <= 4) return "•".repeat(nid.length);
+  return "•••••••••" + nid.slice(-4);
+}
+
 export default async function AdminUsersPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
@@ -26,11 +39,14 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
     id: u.id,
     name: u.fullNameEn,
     nameAr: u.fullNameAr,
-    phone: u.phone,
+    // Masked at the server boundary. The plaintext never enters the page
+    // payload; UsersManager asks for it through adminRevealUserIdentity, which
+    // audits the disclosure. Masking in the browser would be theatre.
+    phone: maskPhone(u.phone),
     email: u.email,
     roles: u.roles,
     kycStatus: u.kycStatus,
-    nationalId: u.nationalId,
+    nationalId: maskNationalId(u.nationalId),
     createdAt: u.createdAt.toISOString(),
     buyerTier: u.buyerProfile?.tier ?? null,
     listingCount: u._count.listings,

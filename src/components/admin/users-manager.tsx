@@ -6,7 +6,7 @@ import type { Role } from "@prisma/client";
 import { Button, Input, Select, Textarea, cn } from "@/components/ui/primitives";
 import { Badge } from "@/components/ui/badges";
 import { formatDate } from "@/lib/format";
-import { adminUpdateUserRoleAction } from "@/app/actions/admin";
+import { adminRevealUserIdentity, adminUpdateUserRoleAction } from "@/app/actions/admin";
 import { reviewKyc, promoteBuyerTier } from "@/app/actions/analyst";
 
 export interface AdminUserItem {
@@ -47,8 +47,13 @@ export function UsersManager({
   const [roleReason, setRoleReason] = useState("");
   const [roleError, setRoleError] = useState<string | null>(null);
 
-  // Identity Unmasking State
-  const [unmaskedId, setUnmaskedId] = useState<string | null>(null);
+  // Identity disclosure. The page never receives plaintext identity data, so a
+  // reveal is a server round-trip that writes USER_PII_REVEALED to the audit
+  // trail. Results are held only for this render of this admin's session.
+  const [revealing, setRevealing] = useState<string | null>(null);
+  const [revealReason, setRevealReason] = useState("");
+  const [revealError, setRevealError] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState<Record<string, { nationalId: string | null; phone: string }>>({});
 
   const isAr = locale === "ar";
 
@@ -61,7 +66,8 @@ export function UsersManager({
         u.name.toLowerCase().includes(q) ||
         (u.email && u.email.toLowerCase().includes(q)) ||
         u.phone.includes(q) ||
-        (u.nationalId && u.nationalId.includes(q))
+        // Masked values only — the plaintext is not in this payload by design.
+        (u.nationalId !== null && u.nationalId.includes(q))
       );
     }
     return true;
@@ -94,16 +100,18 @@ export function UsersManager({
     });
   };
 
-  const maskPhone = (phone: string, unmask: boolean) => {
-    if (unmask) return phone;
-    if (phone.length <= 4) return phone;
-    return phone.slice(0, 4) + " •••• " + phone.slice(-2);
-  };
-
-  const maskId = (nid: string | null, unmask: boolean) => {
-    if (!nid) return "—";
-    if (unmask) return nid;
-    return nid.slice(0, 3) + "••••••••" + nid.slice(-3);
+  const submitReveal = (userId: string) => {
+    setRevealError(null);
+    startTransition(async () => {
+      const res = await adminRevealUserIdentity({ userId, reason: revealReason });
+      if (!res.ok) {
+        setRevealError(res.error);
+        return;
+      }
+      setRevealed((prev) => ({ ...prev, [userId]: res.data! }));
+      setRevealing(null);
+      setRevealReason("");
+    });
   };
 
   return (
@@ -152,6 +160,58 @@ export function UsersManager({
       </div>
 
       {/* Role Change Modal */}
+      {revealing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md space-y-4 rounded-lg border border-rule bg-paper-raised p-6 shadow-xl">
+            <h2 className="font-display text-lg text-ink">
+              {isAr ? "كشف بيانات الهوية" : "Reveal identity data"}
+            </h2>
+            <p className="text-xs text-ink-50">
+              {isAr
+                ? "سيتم تسجيل هذا الكشف في سجل التدقيق باسمك وبالسبب المذكور."
+                : "This discloses a national ID and phone number. The disclosure is written to the audit trail against your name and the reason you give."}
+            </p>
+
+            {revealError && <p className="text-xs text-flagged">{revealError}</p>}
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-70">
+                {isAr ? "السبب (8 أحرف على الأقل)" : "Reason (minimum 8 characters)"}
+              </label>
+              <Textarea
+                rows={3}
+                value={revealReason}
+                onChange={(e) => setRevealReason(e.target.value)}
+                placeholder={
+                  isAr
+                    ? "مثال: مراجعة تطابق الهوية لملف التحقق..."
+                    : "e.g. KYC identity match review for deal AQ-1012..."
+                }
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setRevealing(null);
+                  setRevealReason("");
+                  setRevealError(null);
+                }}
+              >
+                {isAr ? "إلغاء" : "Cancel"}
+              </Button>
+              <Button
+                disabled={pending || revealReason.trim().length < 8}
+                onClick={() => submitReveal(revealing)}
+              >
+                {isAr ? "كشف وتسجيل" : "Reveal & log"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editingUserId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg border border-rule bg-paper-raised p-6 shadow-xl space-y-4">
@@ -236,24 +296,44 @@ export function UsersManager({
             </thead>
             <tbody>
               {filtered.map((u) => {
-                const isUnmasked = unmaskedId === u.id;
+                const clear = revealed[u.id];
                 return (
                   <tr key={u.id} className="border-b border-rule hover:bg-paper-sunken/30 transition-colors">
                     <td className="p-3">
                       <div className="font-medium text-ink">{u.name}</div>
                       <div className="font-mono text-2xs text-ink-50 space-x-2">
-                        <span>{maskPhone(u.phone, isUnmasked)}</span>
+                        <span>{clear ? clear.phone : u.phone}</span>
                         {u.email && <span>· {u.email}</span>}
                       </div>
                       <div className="text-2xs text-ink-30">
-                        NID: {maskId(u.nationalId, isUnmasked)}
-                        <button
-                          type="button"
-                          onClick={() => setUnmaskedId(isUnmasked ? null : u.id)}
-                          className="ms-2 text-info hover:underline"
-                        >
-                          {isUnmasked ? "Mask" : "Reveal"}
-                        </button>
+                        NID: {clear ? (clear.nationalId ?? "—") : (u.nationalId ?? "—")}
+                        {clear ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRevealed((prev) => {
+                                const next = { ...prev };
+                                delete next[u.id];
+                                return next;
+                              })
+                            }
+                            className="ms-2 text-ink-50 hover:underline"
+                          >
+                            {isAr ? "إخفاء" : "Mask"}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRevealing(u.id);
+                              setRevealReason("");
+                              setRevealError(null);
+                            }}
+                            className="ms-2 text-info hover:underline"
+                          >
+                            {isAr ? "كشف (يُسجَّل)" : "Reveal (audited)"}
+                          </button>
+                        )}
                       </div>
                     </td>
 

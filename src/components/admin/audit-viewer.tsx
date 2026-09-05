@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "@/i18n/routing";
 import { Input, Select, Button, cn } from "@/components/ui/primitives";
 import { Badge } from "@/components/ui/badges";
 import { formatDate, relativeTime } from "@/lib/format";
@@ -24,23 +25,41 @@ export function AuditViewer({
   locale,
   events,
   actionTypes,
+  entityTypes,
+  activeAction,
+  activeEntity,
+  nextCursor,
+  matchingTotal,
 }: {
   locale: string;
   events: AuditEventRow[];
   actionTypes: string[];
+  entityTypes: string[];
+  activeAction: string;
+  activeEntity: string;
+  nextCursor: string | null;
+  matchingTotal: number;
 }) {
+  const router = useRouter();
+  // Action and entity filter the query; search refines the page already loaded.
   const [search, setSearch] = useState("");
-  const [actionFilter, setActionFilter] = useState("ALL");
-  const [entityFilter, setEntityFilter] = useState("ALL");
   const [selectedEvent, setSelectedEvent] = useState<AuditEventRow | null>(null);
 
   const isAr = locale === "ar";
 
-  const entityTypes = Array.from(new Set(events.map((e) => e.entityType)));
+  const go = (next: { action?: string; entity?: string; cursor?: string | null }) => {
+    const qs = new URLSearchParams();
+    const a = next.action ?? activeAction;
+    const e = next.entity ?? activeEntity;
+    if (a && a !== "ALL") qs.set("action", a);
+    if (e && e !== "ALL") qs.set("entity", e);
+    // Any filter change restarts paging: a cursor from the previous filter
+    // would silently skip rows.
+    if (next.cursor) qs.set("cursor", next.cursor);
+    router.push(`/admin/audit${qs.toString() ? `?${qs}` : ""}`);
+  };
 
   const filtered = events.filter((e) => {
-    if (actionFilter !== "ALL" && e.action !== actionFilter) return false;
-    if (entityFilter !== "ALL" && e.entityType !== entityFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
       return (
@@ -65,7 +84,7 @@ export function AuditViewer({
           />
         </div>
         <div className="w-52">
-          <Select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
+          <Select value={activeAction} onChange={(e) => go({ action: e.target.value, cursor: null })}>
             <option value="ALL">{isAr ? "جميع الإجراءات" : "All Actions"}</option>
             {actionTypes.map((a) => (
               <option key={a} value={a}>
@@ -75,7 +94,7 @@ export function AuditViewer({
           </Select>
         </div>
         <div className="w-44">
-          <Select value={entityFilter} onChange={(e) => setEntityFilter(e.target.value)}>
+          <Select value={activeEntity} onChange={(e) => go({ entity: e.target.value, cursor: null })}>
             <option value="ALL">{isAr ? "جميع الكيانات" : "All Entities"}</option>
             {entityTypes.map((ent) => (
               <option key={ent} value={ent}>
@@ -84,19 +103,23 @@ export function AuditViewer({
             ))}
           </Select>
         </div>
-        {(search || actionFilter !== "ALL" || entityFilter !== "ALL") && (
+        {(search || activeAction !== "ALL" || activeEntity !== "ALL") && (
           <Button
             size="sm"
             variant="ghost"
             onClick={() => {
               setSearch("");
-              setActionFilter("ALL");
-              setEntityFilter("ALL");
+              go({ action: "ALL", entity: "ALL", cursor: null });
             }}
           >
             {isAr ? "إلغاء التصفية" : "Clear filters"}
           </Button>
         )}
+        <p className="font-mono text-2xs text-ink-30">
+          {isAr
+            ? `${filtered.length} من ${matchingTotal} حدثًا`
+            : `${filtered.length} shown of ${matchingTotal} matching`}
+        </p>
       </div>
 
       {/* Diff / Detail Modal */}
@@ -224,6 +247,21 @@ export function AuditViewer({
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {(nextCursor || matchingTotal > events.length) && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-rule bg-paper-raised px-4 py-3">
+          <p className="text-2xs text-ink-50">
+            {isAr
+              ? "البحث أعلاه يصفّي هذه الصفحة فقط؛ استخدم عوامل التصفية للبحث في السجل كاملًا."
+              : "Search refines this page; use the filters above to query the whole trail."}
+          </p>
+          {nextCursor ? (
+            <Button size="sm" variant="ghost" onClick={() => go({ cursor: nextCursor })}>
+              {isAr ? "الأقدم ←" : "Older →"}
+            </Button>
+          ) : null}
         </div>
       )}
     </div>

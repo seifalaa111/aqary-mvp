@@ -57,8 +57,14 @@ export default async function AnalystQueue({ params }: { params: Promise<{ local
       const overdue = l.slaDueAt ? l.slaDueAt.getTime() < Date.now() : false;
 
       // Flagged first, then value, then age — with overdue files pulled up.
+      // An escalated file outranks everything: someone has asked for help on it.
       const priority =
-        criticalCount * 10_000 + majorCount * 2_000 + (overdue ? 1_500 : 0) + value / 1_000_000 + ageHours / 24;
+        (l.escalatedAt ? 100_000 : 0) +
+        criticalCount * 10_000 +
+        majorCount * 2_000 +
+        (overdue ? 1_500 : 0) +
+        value / 1_000_000 +
+        ageHours / 24;
 
       return {
         id: l.id,
@@ -80,6 +86,8 @@ export default async function AnalystQueue({ params }: { params: Promise<{ local
         submittedAt: l.submittedAt ? l.submittedAt.toISOString() : null,
         slaDueAt: l.slaDueAt ? l.slaDueAt.toISOString() : null,
         overdue,
+        escalatedAt: l.escalatedAt ? l.escalatedAt.toISOString() : null,
+        escalationReason: l.escalationReason,
         priority,
         assignedAnalyst: l.analyst ? { id: l.analyst.id, name: l.analyst.fullNameEn.split(" ")[0]! } : null,
       };

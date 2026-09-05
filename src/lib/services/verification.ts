@@ -319,17 +319,63 @@ export async function escalateListing(args: {
   }
   const listing = await prisma.listing.findUniqueOrThrow({ where: { id: args.listingId } });
 
+  // Escalation has to leave a mark on the file itself. An audit row alone
+  // scrolls out of the ops feed and no queue would ever show the file as
+  // needing a supervisor.
+  const escalated = await prisma.listing.update({
+    where: { id: args.listingId },
+    data: {
+      escalatedAt: new Date(),
+      escalationReason: args.reason.trim(),
+      escalatedById: args.analystId,
+    },
+  });
+
   await audit({
     actorId: args.analystId,
     actorRole: "ANALYST",
     action: "LISTING_ESCALATED",
     entityType: "Listing",
     entityId: args.listingId,
-    before: { status: listing.status, assignedAnalystId: listing.assignedAnalystId },
-    metadata: { reason: args.reason.trim(), urgency: args.urgency ?? "HIGH" },
+    before: { escalatedAt: listing.escalatedAt?.toISOString() ?? null },
+    after: { escalatedAt: escalated.escalatedAt?.toISOString() ?? null },
+    metadata: { reason: args.reason.trim(), urgency: args.urgency ?? "HIGH", status: listing.status },
   });
 
-  return listing;
+  return escalated;
+}
+
+/**
+ * Closes an escalation. Called when a file leaves review under a decision —
+ * publishing or rejecting settles the question that was escalated, so the flag
+ * must not outlive it and inflate the admin overview forever.
+ */
+export async function clearListingEscalation(args: {
+  listingId: string;
+  actorId: string;
+  actorRole: "ANALYST" | "ADMIN";
+  note?: string | null;
+}) {
+  const listing = await prisma.listing.findUniqueOrThrow({ where: { id: args.listingId } });
+  if (!listing.escalatedAt) return listing;
+
+  const cleared = await prisma.listing.update({
+    where: { id: args.listingId },
+    data: { escalatedAt: null, escalationReason: null, escalatedById: null },
+  });
+
+  await audit({
+    actorId: args.actorId,
+    actorRole: args.actorRole,
+    action: "LISTING_ESCALATION_CLEARED",
+    entityType: "Listing",
+    entityId: args.listingId,
+    before: { escalatedAt: listing.escalatedAt.toISOString(), escalationReason: listing.escalationReason },
+    after: { escalatedAt: null },
+    metadata: { note: args.note ?? null },
+  });
+
+  return cleared;
 }
 
 
@@ -583,6 +629,14 @@ export async function approveAndPublish(args: { listingId: string; analystId: st
     });
   }
 
+  // Publication settles the escalation too.
+  await clearListingEscalation({
+    listingId: args.listingId,
+    actorId: args.analystId,
+    actorRole: "ANALYST",
+    note: "Closed by publication",
+  });
+
   return published;
 }
 
@@ -647,6 +701,14 @@ export async function rejectListing(args: { listingId: string; analystId: string
     actorId: args.analystId,
     actorRole: "ANALYST",
     data: { rejectedAt: new Date(), rejectionReason: args.reason },
+  });
+
+  // A rejection answers whatever the escalation was asking.
+  await clearListingEscalation({
+    listingId: args.listingId,
+    actorId: args.analystId,
+    actorRole: "ANALYST",
+    note: "Closed by listing rejection",
   });
 
   await audit({

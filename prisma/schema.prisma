@@ -461,6 +461,7 @@ model User {
   sessions             Session[]
   listings             Listing[]                    @relation("SellerListings")
   assignedListings     Listing[]                    @relation("AnalystListings")
+  escalatedListings    Listing[]                    @relation("EscalatedListings")
   documents            Document[]
   buyerOffers          Offer[]                      @relation("BuyerOffers")
   sellerOffers         Offer[]                      @relation("SellerOffers")
@@ -1102,6 +1103,11 @@ model Listing {
 
   assignedAnalystId String?
   slaDueAt          DateTime?
+  /// Set when an analyst raises a file for supervisor attention; cleared when
+  /// the file leaves review. An escalation the console cannot see is not one.
+  escalatedAt       DateTime?
+  escalationReason  String?
+  escalatedById     String?
   wizardStep        Int       @default(1)
   wizardCompleted   Int[]     @default([])
   viewCount         Int       @default(0)
@@ -1112,6 +1118,7 @@ model Listing {
   contract      Contract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
   seller        User           @relation("SellerListings", fields: [sellerId], references: [id], onDelete: Cascade)
   analyst       User?          @relation("AnalystListings", fields: [assignedAnalystId], references: [id])
+  escalatedBy   User?          @relation("EscalatedListings", fields: [escalatedById], references: [id])
   documents     Document[]
   media         MediaAsset[]
   extractions   Extraction[]

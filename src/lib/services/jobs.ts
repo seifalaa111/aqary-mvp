@@ -137,6 +137,11 @@ export async function runJobNow(jobId: string): Promise<void> {
         runAt: new Date(Date.now() + 2000),
       },
     });
+    // The failure is persisted, but it still propagates: a caller that awaited
+    // this run needs to know it did not succeed. Callers that legitimately do
+    // not care (seller submit, which falls back to the queue) opt out at the
+    // call site.
+    throw err;
   }
 }
 
@@ -181,6 +186,9 @@ export async function retryJob(args: { jobId: string; actorId: string; actorRole
       status: "QUEUED",
       runAt: new Date(),
       lastError: null,
+      // runJobNow increments on entry; decrementing here keeps the displayed
+      // attempt count honest — a manual retry buys one more run without
+      // rewriting how many times the job has actually been tried.
       attempts: Math.max(0, job.attempts - 1),
     },
   });
@@ -196,6 +204,13 @@ export async function retryJob(args: { jobId: string; actorId: string; actorRole
     metadata: { jobType: job.type },
   });
 
-  await runJobNow(args.jobId);
+  // runJobNow rethrows on failure. Swallow it here so the admin gets the job's
+  // real post-run state rather than a stack trace — but return that state, so a
+  // retry that failed again is reported as a failure and not as success.
+  try {
+    await runJobNow(args.jobId);
+  } catch {
+    // Persisted by runJobNow as DEAD or QUEUED with lastError; read back below.
+  }
   return prisma.job.findUniqueOrThrow({ where: { id: args.jobId } });
 }
