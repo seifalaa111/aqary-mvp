@@ -144,8 +144,22 @@ export type DealParty = "BUYER" | "SELLER" | "COORDINATOR" | "DEVELOPER_PARTNER"
  * deliberately insufficient on its own: a partner has no access until an
  * active membership maps them to a developer tenant.
  */
-export async function requireDeveloperPartnerAccess(developerId?: string) {
-  const user = await requireRole("DEVELOPER_PARTNER", "ADMIN");
+/**
+ * Developer-partner scope.
+ *
+ * `page: true` bounces an unauthenticated or wrong-role visitor to sign-in the
+ * way every other guarded page does. Without it the throwing variant surfaced
+ * as a 500 on `/partner` for a signed-out visitor, while `/admin`, `/analyst`,
+ * `/seller` and `/buyer` all redirected — the one route that told an anonymous
+ * caller it had crashed rather than that they needed to sign in.
+ */
+export async function requireDeveloperPartnerAccess(
+  developerId?: string,
+  opts: { page?: boolean } = {},
+) {
+  const user = opts.page
+    ? await requireRolePage("DEVELOPER_PARTNER", "ADMIN")
+    : await requireRole("DEVELOPER_PARTNER", "ADMIN");
   if (user.roles.includes("ADMIN")) return { user, developerIds: developerId ? [developerId] : null };
 
   const memberships = await prisma.developerPartnerMembership.findMany({

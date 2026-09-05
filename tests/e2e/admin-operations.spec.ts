@@ -58,6 +58,19 @@ test.describe("Phase 3 — Admin & Analyst Operations Platform", () => {
     await expect(page).toHaveURL(/\/en\/admin/);
   });
 
+  test("every guarded route sends a signed-out visitor to sign-in, not an error", async ({ page }) => {
+    // /partner used to 500 here while /admin, /analyst, /seller and /buyer all
+    // redirected: it guarded with the throwing variant instead of the page one,
+    // so an anonymous caller was told the app had crashed rather than that they
+    // needed to sign in. Caught against the deployment, not the source.
+    await page.context().clearCookies();
+    for (const path of ["/en/admin", "/en/analyst", "/en/seller", "/en/buyer", "/en/partner"]) {
+      const res = await page.goto(path, { waitUntil: "domcontentloaded" });
+      expect(res?.status(), `${path} status`).toBeLessThan(400);
+      await expect(page, `${path} should land on sign-in`).toHaveURL(/\/signin/);
+    }
+  });
+
   test("analyst cannot access /admin suite directly", async ({ page }) => {
     // Find an analyst who is not an admin
     const analyst = await demoUser("ANALYST");

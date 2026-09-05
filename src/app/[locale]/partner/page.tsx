@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function PartnerPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const access = await requireDeveloperPartnerAccess();
+  const access = await requireDeveloperPartnerAccess(undefined, { page: true });
   // requireDeveloperPartnerAccess returns null developerIds for ADMIN only — a
   // partner with no active membership is rejected before reaching here. The
   // role is re-asserted rather than inferred from the null, so a future change
