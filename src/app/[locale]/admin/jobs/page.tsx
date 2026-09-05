@@ -51,19 +51,18 @@ export default async function AdminJobsPage({ params }: { params: Promise<{ loca
     count: g._count,
   }));
 
+  const t = await getTranslations({ locale, namespace: "admin" });
   const isAr = locale === "ar";
 
   return (
     <div className="space-y-6">
       <header>
-        <Eyebrow>{isAr ? "البنية التحتية والمحركات" : "System Workers"}</Eyebrow>
+        <Eyebrow>{t("systemWorkers")}</Eyebrow>
         <h1 className="mt-1 display-section text-ink">
-          {isAr ? "مراقب المهام الخلفية وقوائم الانتظار" : "Background Jobs & Worker Queue"}
+          {t("backgroundJobsWorkerQueue")}
         </h1>
         <p className="mt-1 text-sm text-ink-50">
-          {isAr
-            ? "متابعة المهام غير المتزامنة، فحص الأخطاء، وحجب البيانات الحساسة مع إمكانية إعادة التشغيل الآمن."
-            : "Monitor asynchronous tasks, inspect sanitized execution payloads, and trigger safe idempotent retries."}
+          {t("monitorAsynchronousTasksInspectSanitized")}
         </p>
       </header>
 

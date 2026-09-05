@@ -56,19 +56,18 @@ export default async function AdminListingsPage({ params }: { params: Promise<{ 
     updatedAt: l.updatedAt.toISOString(),
   }));
 
+  const t = await getTranslations({ locale, namespace: "admin" });
   const isAr = locale === "ar";
 
   return (
     <div className="space-y-6">
       <header>
-        <Eyebrow>{isAr ? "إدارة العقود" : "Listing Supervision"}</Eyebrow>
+        <Eyebrow>{t("listingSupervision")}</Eyebrow>
         <h1 className="mt-1 display-section text-ink">
-          {isAr ? "العقود والتدخلات الإدارية" : "Marketplace Listings & Overrides"}
+          {t("marketplaceListingsOverrides")}
         </h1>
         <p className="mt-1 text-sm text-ink-50">
-          {isAr
-            ? "متابعة جميع العقود المعروضة، التدقيق في الحواجز، إعادة الإسناد، والتعديل الإداري المبرر للحالات."
-            : "Search, inspect, reassign, and execute authorized state overrides with mandatory audit justifications."}
+          {t("searchInspectReassignExecuteAuthorized")}
         </p>
       </header>
 

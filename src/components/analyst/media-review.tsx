@@ -36,6 +36,7 @@ export function MediaReview({
   onModerate: (id: string, status: "APPROVED" | "FLAGGED" | "REJECTED", note?: string) => void;
   pending: boolean;
 }) {
+  const t = useTranslations("analyst");
   const isAr = locale === "ar";
   const [noting, setNoting] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -68,9 +69,7 @@ export function MediaReview({
       </div>
 
       <p className="text-2xs leading-relaxed text-ink-50">
-        {isAr
-          ? "تأكد أن الصور تطابق نوع الوحدة المذكور، وأن أي تصوّر حاسوبي مُعلَّم كذلك، وأن أي صورة تحتوي أشخاصًا أو مستندات لا تُنشر."
-          : "Check the images match the stated unit type, that anything computer-generated is labelled a render, and that nothing showing people or documents goes live."}
+        {t("checkImagesMatchStatedUnit")}
       </p>
 
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">

@@ -50,6 +50,7 @@ export default async function AdminPipelinePage({ params }: { params: Promise<{ 
     },
   });
 
+  const t = await getTranslations({ locale, namespace: "admin" });
   const isAr = locale === "ar";
 
   const stageOf = (d: (typeof deals)[number]) => {
@@ -66,21 +67,19 @@ export default async function AdminPipelinePage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-6">
       <header>
-        <Eyebrow>{isAr ? "إدارة التدفق المالي والصفقات" : "Deal Oversight"}</Eyebrow>
+        <Eyebrow>{t("dealOversight")}</Eyebrow>
         <h1 className="mt-1 display-section text-ink">
-          {isAr ? "مسار الصفقات عبر مراحل التنازل" : "7-Stage Deal Pipeline"}
+          {t("n7StageDealPipeline")}
         </h1>
         <p className="mt-1 text-sm text-ink-50">
-          {isAr
-            ? "متابعة شاملة لجميع الصفقات من قبول العرض حتى تسليم الشيكات والرسوم وتسجيل التنازل."
-            : "Monitor transactions from offer acceptance through developer NOC, assignment signing, and completion."}
+          {t("monitorTransactionsFromOfferAcceptance")}
         </p>
       </header>
 
       {deals.length === 0 ? (
         <EmptyState
-          title={isAr ? "لا توجد صفقات جارية" : "No deals in pipeline yet"}
-          body={isAr ? "تفتح غرفة الصفقة بمجرد قبول البائع لعرض المشتري." : "Deal rooms open when a seller accepts a buyer offer."}
+          title={t("noDealsPipelineYet")}
+          body={t("dealRoomsOpenWhenSeller")}
         />
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">

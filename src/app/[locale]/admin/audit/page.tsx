@@ -1,4 +1,4 @@
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireRolePage } from "@/lib/auth/guard";
@@ -65,19 +65,18 @@ export default async function AdminAuditPage({
     at: e.at.toISOString(),
   }));
 
+  const t = await getTranslations({ locale, namespace: "admin" });
   const isAr = locale === "ar";
 
   return (
     <div className="space-y-6">
       <header>
-        <Eyebrow>{isAr ? "الرقابة والامتثال" : "Compliance & Security"}</Eyebrow>
+        <Eyebrow>{t("complianceSecurity")}</Eyebrow>
         <h1 className="mt-1 display-section text-ink">
-          {isAr ? "سجل التدقيق والرقابة الشامل" : "Immutable Audit Trail"}
+          {t("immutableAuditTrail")}
         </h1>
         <p className="mt-1 text-sm text-ink-50">
-          {isAr
-            ? "سجل غير قابل للتعديل لكل حركة أموال، تغيير صلاحيات، تعديل سياسات، وتدخل إداري (WHO, WHAT, TARGET, WHEN, WHY, DIFF)."
-            : "Every money movement, verification promotion, role elevation, and administrative override with full before/after state diffs."}
+          {t("everyMoneyMovementVerificationPromotion")}
         </p>
       </header>
 

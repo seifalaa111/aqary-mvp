@@ -135,66 +135,65 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
   ]);
 
   const [totalUsers, activeDealsCount, acceptedOffersCount] = counts;
+  const t = await getTranslations({ locale, namespace: "admin" });
   const isAr = locale === "ar";
 
   return (
     <div className="space-y-8">
       <header>
-        <Eyebrow>{isAr ? "لوحة الإدارة المتقدمة" : "Operations Management"}</Eyebrow>
+        <Eyebrow>{t("operationsManagement")}</Eyebrow>
         <h1 className="mt-1 display-section text-ink">
-          {isAr ? "نظرة عامة على العمليات" : "Operations Overview"}
+          {t("operationsOverview")}
         </h1>
         <p className="mt-1 text-sm text-ink-50">
-          {isAr
-            ? "متابعة شاملة لجميع العمليات، التنبيهات، المدفوعات المتعثرة، والتدخلات الإدارية."
-            : "Live marketplace supervision, exceptions, intervention points, and critical incident response."}
+          {t("liveMarketplaceSupervisionExceptionsIntervention")}
         </p>
       </header>
 
       {/* Attention / KPI Grid */}
       <section aria-labelledby="attention-heading">
         <h2 id="attention-heading" className="eyebrow mb-3">
-          {isAr ? "ما يتطلب اتخاذ إجراء فوري" : "What needs attention right now"}
+          {t("whatNeedsAttentionRightNow")}
         </h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           <AttentionCard
-            label={isAr ? "تصعيدات" : "Escalations"}
+            label={t("escalations")}
             value={escalatedListings.length}
             href="/analyst"
             tone={escalatedListings.length > 0 ? "flagged" : "neutral"}
           />
           <AttentionCard
-            label={isAr ? "قيد المراجعة" : "Backlog"}
+            label={t("backlog2")}
             value={backlogListings}
             href="/analyst"
             tone="neutral"
           />
           <AttentionCard
-            label={isAr ? "تجاوزات الـ SLA" : "SLA Breaches"}
+            label={t("slaBreaches2")}
             value={slaBreachedListings.length}
             href="/analyst"
             tone={slaBreachedListings.length > 0 ? "flagged" : "neutral"}
           />
           <AttentionCard
-            label={isAr ? "فروقات حرجة" : "Critical Discrepancies"}
+            label={t("criticalDiscrepancies2")}
             value={criticalDiscrepancies.length}
             href="/admin/listings"
             tone={criticalDiscrepancies.length > 0 ? "flagged" : "neutral"}
           />
           <AttentionCard
-            label={isAr ? "تنبيهات احتيال" : "Fraud Alerts"}
+            label={t("fraudAlerts2")}
             value={openFraudSignals.length}
             href="/admin/listings"
             tone={openFraudSignals.length > 0 ? "flagged" : "neutral"}
           />
           <AttentionCard
-            label={isAr ? "مدفوعات متعثرة" : "Failed Payments"}
+            label={t("failedPayments2")}
             value={failedPayments.length}
             href="/admin/payments"
             tone={failedPayments.length > 0 ? "flagged" : "neutral"}
           />
           <AttentionCard
-            label={isAr ? "مهام متوقفة" : "Dead Jobs"}
+            label={t("deadJobs2")}
             value={deadJobs.length}
             href="/admin/jobs"
             tone={deadJobs.length > 0 ? "flagged" : "neutral"}
@@ -210,15 +209,15 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
           <div className="rounded-lg border border-rule bg-paper-raised p-4">
             <div className="flex items-center justify-between pb-3 border-b border-rule">
               <h3 className="font-medium text-sm text-ink">
-                {isAr ? "المدفوعات المتعثرة" : "Failed Payments"}
+                {t("failedPayments3")}
               </h3>
               <Link href="/admin/payments" className="text-xs text-info hover:underline">
-                {isAr ? "عرض الكل" : "View all payments"} →
+                {t("viewAllPayments")} →
               </Link>
             </div>
             {failedPayments.length === 0 ? (
               <p className="py-4 text-xs text-ink-50 text-center">
-                {isAr ? "لا توجد مدفوعات متعثرة." : "No failed payments requiring intervention."}
+                {t("noFailedPaymentsRequiringIntervention")}
               </p>
             ) : (
               <ul className="divide-y divide-rule">
@@ -237,7 +236,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
                       href={`/admin/payments?id=${p.id}`}
                       className="shrink-0 rounded-sm border border-rule px-2 py-1 text-2xs hover:bg-paper-sunken"
                     >
-                      {isAr ? "إجراء" : "Inspect & Retry"}
+                      {t("inspectRetry")}
                     </Link>
                   </li>
                 ))}
@@ -249,15 +248,15 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
           <div className="rounded-lg border border-rule bg-paper-raised p-4">
             <div className="flex items-center justify-between pb-3 border-b border-rule">
               <h3 className="font-medium text-sm text-ink">
-                {isAr ? "المهام الخلفية المتوقفة" : "Failed / Dead Jobs"}
+                {t("failedDeadJobs")}
               </h3>
               <Link href="/admin/jobs" className="text-xs text-info hover:underline">
-                {isAr ? "مراقب المهام" : "Open jobs monitor"} →
+                {t("openJobsMonitor")} →
               </Link>
             </div>
             {deadJobs.length === 0 ? (
               <p className="py-4 text-xs text-ink-50 text-center">
-                {isAr ? "جميع المهام تعمل بنجاح." : "All background queues are operating normally."}
+                {t("allBackgroundQueuesOperatingNormally")}
               </p>
             ) : (
               <ul className="divide-y divide-rule">
@@ -274,7 +273,7 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
                       href="/admin/jobs"
                       className="shrink-0 rounded-sm border border-rule px-2 py-1 text-2xs hover:bg-paper-sunken"
                     >
-                      {isAr ? "إعادة محاولة" : "Retry"}
+                      {t("retry")}
                     </Link>
                   </li>
                 ))}
@@ -289,15 +288,15 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
           <div className="rounded-lg border border-rule bg-paper-raised p-4">
             <div className="flex items-center justify-between pb-3 border-b border-rule">
               <h3 className="font-medium text-sm text-ink">
-                {isAr ? "عقود تجاوزت الـ SLA" : "Active SLA Breaches"}
+                {t("activeSlaBreaches")}
               </h3>
               <Link href="/analyst" className="text-xs text-info hover:underline">
-                {isAr ? "قائمة التوثيق" : "Verification queue"} →
+                {t("verificationQueue")} →
               </Link>
             </div>
             {slaBreachedListings.length === 0 ? (
               <p className="py-4 text-xs text-ink-50 text-center">
-                {isAr ? "لا توجد ملفات متأخرة عن الوقت المحدد." : "All files are within verification SLA target."}
+                {t("allFilesWithinVerificationSla")}
               </p>
             ) : (
               <ul className="divide-y divide-rule">
@@ -324,15 +323,15 @@ export default async function AdminOverviewPage({ params }: { params: Promise<{ 
           <div className="rounded-lg border border-rule bg-paper-raised p-4">
             <div className="flex items-center justify-between pb-3 border-b border-rule">
               <h3 className="font-medium text-sm text-ink">
-                {isAr ? "آخر التدخلات الإدارية" : "Recent Administrative Actions"}
+                {t("recentAdministrativeActions")}
               </h3>
               <Link href="/admin/audit" className="text-xs text-info hover:underline">
-                {isAr ? "سجل التدقيق الكامل" : "Audit trail"} →
+                {t("auditTrail")} →
               </Link>
             </div>
             {recentAudits.length === 0 ? (
               <p className="py-4 text-xs text-ink-50 text-center">
-                {isAr ? "لا توجد سجلات تدقيق إدارية حديثة." : "No recent administrative interventions."}
+                {t("noRecentAdministrativeInterventions")}
               </p>
             ) : (
               <ul className="divide-y divide-rule">

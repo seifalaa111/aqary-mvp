@@ -44,14 +44,12 @@ export function FraudPanel({
   return (
     <div className="flex flex-col gap-5">
       <Callout tone="info">
-        {isAr
-          ? "هذه مؤشرات وليست أحكامًا. كل مؤشر يحتاج قرارًا مكتوبًا من المحلل، ولا يُغلق تلقائيًا."
-          : "These are signals, not verdicts. Each one needs a written analyst disposition; none of them decides anything on its own."}
+        {t("theseSignalsNotVerdictsEach")}
       </Callout>
 
       {open.length === 0 ? (
         <Callout tone="verified">
-          {isAr ? "لا توجد مؤشرات مفتوحة على هذا الملف." : "No open signals on this file."}
+          {t("noOpenSignalsFile")}
         </Callout>
       ) : (
         <ul className="flex flex-col gap-3">

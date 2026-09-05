@@ -123,7 +123,7 @@ export function DecisionPanel({
 
       {published ? (
         <Callout tone="verified">
-          {isAr ? "هذا الملف منشور بالفعل." : "This listing is already published."}
+          {t("listingAlreadyPublished")}
         </Callout>
       ) : null}
 
@@ -151,9 +151,7 @@ export function DecisionPanel({
         <div className="flex flex-col gap-3 rounded-md border border-rule bg-paper-raised p-4">
           <p className="text-sm font-semibold text-ink">{t("requestInfo")}</p>
           <p className="text-xs text-ink-50">
-            {isAr
-              ? "اختر البنود المحددة المطلوبة. يرى البائع هذه القائمة بالضبط."
-              : "Pick the specific items. The seller sees exactly this list — never a generic request."}
+            {t("pickSpecificItemsSellerSees")}
           </p>
           <ul className="flex flex-col gap-1.5">
             {INFO_ITEMS.map((item) => (
@@ -207,9 +205,7 @@ export function DecisionPanel({
         <div className="flex flex-col gap-3 rounded-md border border-flagged/30 bg-flagged-soft p-4">
           <p className="text-sm font-semibold text-flagged">{t("reject")}</p>
           <p className="text-xs text-ink-70">
-            {isAr
-              ? "يُرسل السبب إلى البائع كما هو. اكتبه بوضوح."
-              : "The reason goes to the seller verbatim. Write it so they can act on it."}
+            {t("reasonGoesSellerVerbatimWrite")}
           </p>
           <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
           <div className="flex gap-2">

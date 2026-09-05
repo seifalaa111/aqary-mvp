@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { getTranslations } from "next-intl/server";
 import { requireRolePage } from "@/lib/auth/guard";
 import { prisma } from "@/lib/db";
 import { WorkspaceShell, type NavItem } from "@/components/chrome/workspace-shell";
@@ -20,51 +21,52 @@ export default async function AdminLayout({
   ]);
 
   const attentionTotal = failedPayments + deadJobs + criticalDiscrepancies;
+  const t = await getTranslations({ locale, namespace: "admin" });
   const isAr = locale === "ar";
 
   const nav: NavItem[] = [
     {
       href: "/admin",
-      label: isAr ? "نظرة عامة" : "Overview",
+      label: t("overview2"),
       badge: attentionTotal || undefined,
     },
     {
       href: "/admin/listings",
-      label: isAr ? "العقود" : "Listings",
+      label: t("listings2"),
     },
     {
       href: "/admin/users",
-      label: isAr ? "المستخدمون والتحقق" : "Users & KYC",
+      label: t("usersKyc"),
     },
     {
       href: "/admin/pipeline",
-      label: isAr ? "مسار الصفقات" : "Pipeline",
+      label: t("pipeline2"),
     },
     {
       href: "/admin/policies",
-      label: isAr ? "سياسات المطورين" : "Policies",
+      label: t("policies2"),
     },
     {
       href: "/admin/payments",
-      label: isAr ? "المدفوعات" : "Payments",
+      label: t("payments2"),
       badge: failedPayments || undefined,
     },
     {
       href: "/admin/jobs",
-      label: isAr ? "المهام الخلفية" : "Jobs",
+      label: t("jobs2"),
       badge: deadJobs || undefined,
     },
     {
       href: "/admin/metrics",
-      label: isAr ? "المؤشرات" : "Metrics",
+      label: t("metrics2"),
     },
     {
       href: "/admin/audit",
-      label: isAr ? "سجل التدقيق" : "Audit",
+      label: t("audit2"),
     },
     {
       href: "/analyst",
-      label: isAr ? "منصة التحقق ←" : "Verification workbench →",
+      label: t("verificationWorkbench"),
     },
   ];
 

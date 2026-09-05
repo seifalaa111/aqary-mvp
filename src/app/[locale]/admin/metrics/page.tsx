@@ -73,19 +73,18 @@ export default async function AdminMetricsPage({ params }: { params: Promise<{ l
   const gmv = completedDeals.reduce((sum, d) => sum + Number(d.cashToSeller), 0);
   const revenue = completedDeals.reduce((sum, d) => sum + Number(d.platformFee), 0);
 
+  const t = await getTranslations({ locale, namespace: "admin" });
   const isAr = locale === "ar";
 
   return (
     <div className="space-y-8">
       <header>
-        <Eyebrow>{isAr ? "ذكاء الأعمال والتشغيل" : "Business Intelligence"}</Eyebrow>
+        <Eyebrow>{t("businessIntelligence")}</Eyebrow>
         <h1 className="mt-1 display-section text-ink">
-          {isAr ? "مؤشرات العمليات والأداء الحقيقي" : "Operational Metrics & Performance"}
+          {t("operationalMetricsPerformance")}
         </h1>
         <p className="mt-1 text-sm text-ink-50">
-          {isAr
-            ? "بيانات تشغيلية دقيقة ومحسوبة مباشرة من السجلات الفعلية دون افتراضات أو تزييف."
-            : "Transparent transactional metrics derived strictly from verified database records."}
+          {t("transparentTransactionalMetricsDerivedStrictly")}
         </p>
       </header>
 
@@ -93,34 +92,32 @@ export default async function AdminMetricsPage({ params }: { params: Promise<{ l
       <div className="rounded-lg border border-brass/40 bg-brass-soft/30 p-4 text-xs text-ink-70 space-y-1">
         <p className="font-semibold text-ink flex items-center gap-1.5">
           <span>ℹ️</span>
-          <span>{isAr ? "تنويه البيانات التجريبية" : "Demonstration Environment Notice"}</span>
+          <span>{t("demonstrationEnvironmentNotice")}</span>
         </p>
         <p>
-          {isAr
-            ? "المؤشرات الخاصة بأسعار المطور المقارنة وأسعار المتر التاريخية تمثل بيانات اختبارية (Synthetic Seed Data). جميع المؤشرات التشغيلية والمالية أدناه محسوبة من المعاملات المسجلة."
-            : "Valuation comparables and historical developer pricing benchmarks represent synthetic seed models. All operational throughput, extraction adoption, and completion figures below are calculated from active database rows."}
+          {t("valuationComparablesHistoricalDeveloperPricing")}
         </p>
       </div>
 
       {/* Core KPIs */}
       <dl className="grid gap-px overflow-hidden rounded-lg border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label={isAr ? "معدل الإنجاز اليومي لكل محلل" : "Files per analyst / day"}
+          label={t("filesPerAnalystDay")}
           value={filesPerDay.toFixed(1)}
         />
         <KpiCard
-          label={isAr ? "وسيط زمن التوثيق" : "Median time to verify"}
+          label={t("medianTimeVerify")}
           value={`${medianHours.toFixed(1)} hrs`}
         />
         <KpiCard
-          label={isAr ? "معدل اعتماد الاستخراج الآلي" : "Extraction adoption rate"}
+          label={t("extractionAdoptionRate")}
           value={`${extractionAdoptionRate.toFixed(1)}%`}
-          hint={isAr ? "نسبة الحقول المعتمدة مباشرة من المحرك" : "Fields promoted directly from extraction without manual override"}
+          hint={t("fieldsPromotedDirectlyFromExtraction")}
         />
         <KpiCard
-          label={isAr ? "معدل التصحيح اليدوي" : "Extraction correction rate"}
+          label={t("extractionCorrectionRate")}
           value={`${correctionRate.toFixed(1)}%`}
-          hint={isAr ? "نسبة الحقول المعدلة يدويًا بواسطة المحلل" : "Fields requiring manual analyst correction"}
+          hint={t("fieldsRequiringManualAnalystCorrection")}
         />
       </dl>
 
@@ -130,15 +127,15 @@ export default async function AdminMetricsPage({ params }: { params: Promise<{ l
         <Card>
           <CardBody className="space-y-4">
             <h2 className="font-display text-base text-ink">
-              {isAr ? "مسار التحويل: من العرض حتى الإتمام" : "Transaction Conversion Funnel"}
+              {t("transactionConversionFunnel")}
             </h2>
             <FunnelChart
               steps={[
-                { label: isAr ? "عقود مسجلة" : "Submitted", value: submittedCount },
-                { label: isAr ? "موثقة ومعروضة" : "Listed", value: listedCount },
-                { label: isAr ? "تلقت عروضًا" : "With Offers", value: withOffers },
-                { label: isAr ? "غرف صفقات مفتوحة" : "Active Deals", value: allDeals },
-                { label: isAr ? "صفقات مكتملة" : "Completed", value: completedDeals.length },
+                { label: t("submitted"), value: submittedCount },
+                { label: t("listed"), value: listedCount },
+                { label: t("offers"), value: withOffers },
+                { label: t("activeDeals"), value: allDeals },
+                { label: t("completed"), value: completedDeals.length },
               ]}
             />
           </CardBody>
@@ -148,29 +145,27 @@ export default async function AdminMetricsPage({ params }: { params: Promise<{ l
         <Card>
           <CardBody className="space-y-4">
             <h2 className="font-display text-base text-ink">
-              {isAr ? "الاقتصاديات والتحصيل المالي" : "Marketplace Economics & Revenue"}
+              {t("marketplaceEconomicsRevenue")}
             </h2>
             <p className="text-xs text-ink-50">
-              {isAr
-                ? "عمولة البائع 0%. رسوم نجاح المشتري 2% تُحصّل فقط عند إتمام نقل العقد رسميًا."
-                : "Seller commission is strictly 0%. Buyer platform fee is 2% collected exclusively upon successful completion."}
+              {t("sellerCommissionStrictly0Buyer")}
             </p>
 
             <dl className="divide-y divide-rule text-sm">
               <div className="flex justify-between py-2.5">
-                <dt className="text-ink-50">{isAr ? "إجمالي قيمة العقود المنقولة (GMV)" : "Completed GMV"}</dt>
+                <dt className="text-ink-50">{t("completedGmv")}</dt>
                 <dd className="money font-bold text-ink">{egp(gmv)}</dd>
               </div>
               <div className="flex justify-between py-2.5">
-                <dt className="text-ink-50">{isAr ? "إيراد رسوم النجاح المحصلة (2%)" : "Success fee revenue (2%)"}</dt>
+                <dt className="text-ink-50">{t("successFeeRevenue2")}</dt>
                 <dd className="money font-bold text-verified">{egp(revenue)}</dd>
               </div>
               <div className="flex justify-between py-2.5">
-                <dt className="text-ink-50">{isAr ? "الصفقات المنجزة بنجاح" : "Completed transactions"}</dt>
+                <dt className="text-ink-50">{t("completedTransactions")}</dt>
                 <dd className="font-mono font-semibold text-ink">{completedDeals.length}</dd>
               </div>
               <div className="flex justify-between py-2.5">
-                <dt className="text-ink-50">{isAr ? "متوسط قيمة الصفقة" : "Average deal size"}</dt>
+                <dt className="text-ink-50">{t("averageDealSize")}</dt>
                 <dd className="money font-semibold text-ink">
                   {completedDeals.length > 0 ? egp(gmv / completedDeals.length) : "—"}
                 </dd>

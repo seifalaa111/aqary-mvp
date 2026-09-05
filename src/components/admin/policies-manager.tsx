@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import type { AssignmentPermission, FeeType, PolicySource, PolicyVerificationState } from "@prisma/client";
 import { Button, Input, Select, Textarea, cn } from "@/components/ui/primitives";
@@ -84,6 +85,7 @@ export function PoliciesManager({
   const [changeReason, setChangeReason] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
 
+  const t = useTranslations("admin");
   const isAr = locale === "ar";
 
   const filtered = rows.filter((r) => {
@@ -162,7 +164,7 @@ export function PoliciesManager({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={isAr ? "بحث باسم المطور..." : "Search developer..."}
+          placeholder={t("searchDeveloper")}
         />
       </div>
 
@@ -176,7 +178,7 @@ export function PoliciesManager({
                   {selectedHistory.developerNameEn}
                 </h2>
                 <p className="text-xs text-ink-50">
-                  {isAr ? "سجل التعديلات والإصدارات التاريخية" : "Immutable Policy Version History"}
+                  {t("immutablePolicyVersionHistory")}
                 </p>
               </div>
               <Button size="sm" variant="ghost" onClick={() => setHistoryDeveloperId(null)}>

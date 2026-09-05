@@ -116,9 +116,7 @@ export function ReconciliationPanel({
         </p>
         <p className="mt-1 text-sm text-ink-70">
           {data.worstDeltaPct.toFixed(2)}%{" "}
-          {isAr
-            ? "أكبر فارق بين مصدرين موجودين لقيمة المسدد."
-            : "the widest gap between any two present sources for the amount paid."}
+          {t("widestGapBetweenAnyTwo")}
         </p>
       </div>
 
@@ -149,12 +147,12 @@ export function ReconciliationPanel({
       </ul>
 
       <dl className="rule-t text-sm">
-        <Row label={isAr ? "إجمالي سعر التعاقد" : "Total contract price"} value={data.totalPrice ? egp(data.totalPrice, { decimals: 0 }) : "—"} />
+        <Row label={t("totalContractPrice")} value={data.totalPrice ? egp(data.totalPrice, { decimals: 0 }) : "—"} />
         <Row
-          label={isAr ? "الرصيد المتبقي حسب الإيصالات" : "Outstanding, from receipts"}
+          label={t("outstandingFromReceipts")}
           value={data.outstandingFromReceipts ? egp(data.outstandingFromReceipts, { decimals: 0 }) : "—"}
         />
-        <Row label={isAr ? "تغطية الإيصالات" : "Receipt coverage"} value={`${data.receiptCoveragePct}%`} />
+        <Row label={t("receiptCoverage")} value={`${data.receiptCoveragePct}%`} />
       </dl>
 
       {/* ---- Discrepancies ---- */}
@@ -168,7 +166,7 @@ export function ReconciliationPanel({
 
         {open.length === 0 ? (
           <Callout tone="verified">
-            {isAr ? "كل المصادر متطابقة ضمن الحدود المسموحة." : "Every source reconciles within tolerance."}
+            {t("everySourceReconcilesWithinTolerance")}
           </Callout>
         ) : (
           <ul className="flex flex-col gap-3">

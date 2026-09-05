@@ -15,7 +15,7 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
   const users = await prisma.user.findMany({
     where: { deletedAt: null },
     orderBy: { createdAt: "desc" },
-    take: 100,
+    take: 60,
     include: {
       buyerProfile: {
         select: {
@@ -29,9 +29,13 @@ export default async function UsersPage({ params }: { params: Promise<{ locale: 
         },
       },
       sellerProfile: { select: { relationshipToContract: true } },
+      // Capped per user. A reviewer works the most recent submissions; loading
+      // every document a long-lived account has ever uploaded, for 60 accounts
+      // at once, costs far more than the screen can show.
       documents: {
         select: { id: true, type: true, fileName: true, status: true, rejectionReason: true, createdAt: true },
         orderBy: { createdAt: "desc" },
+        take: 25,
       },
       _count: { select: { listings: true, buyerOffers: true } },
     },

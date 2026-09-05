@@ -54,19 +54,18 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
     dealCount: u._count.buyerDeals + u._count.sellerDeals,
   }));
 
+  const t = await getTranslations({ locale, namespace: "admin" });
   const isAr = locale === "ar";
 
   return (
     <div className="space-y-6">
       <header>
-        <Eyebrow>{isAr ? "إدارة الهويات والأذونات" : "Identity & Access"}</Eyebrow>
+        <Eyebrow>{t("identityAccess")}</Eyebrow>
         <h1 className="mt-1 display-section text-ink">
-          {isAr ? "المستخدمون والتحقق وإدارة الأدوار" : "Users, KYC & Role Governance"}
+          {t("usersKycRoleGovernance")}
         </h1>
         <p className="mt-1 text-sm text-ink-50">
-          {isAr
-            ? "التحكم في أدوار المستخدمين، حماية البيانات الحساسة، والإشراف على التوثيق القانوني."
-            : "Role management, sensitive PII masking, KYC verification oversight, and buyer financial tiering."}
+          {t("roleManagementSensitivePiiMasking")}
         </p>
       </header>
 

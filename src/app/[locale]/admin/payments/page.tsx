@@ -55,19 +55,18 @@ export default async function AdminPaymentsPage({ params }: { params: Promise<{ 
     })),
   }));
 
+  const t = await getTranslations({ locale, namespace: "admin" });
   const isAr = locale === "ar";
 
   return (
     <div className="space-y-6">
       <header>
-        <Eyebrow>{isAr ? "العمليات المالية" : "Financial Operations"}</Eyebrow>
+        <Eyebrow>{t("financialOperations")}</Eyebrow>
         <h1 className="mt-1 display-section text-ink">
-          {isAr ? "إدارة المدفوعات والتحصيل" : "Payment Operations & Settlement"}
+          {t("paymentOperationsSettlement")}
         </h1>
         <p className="mt-1 text-sm text-ink-50">
-          {isAr
-            ? "متابعة عمليات السداد، إعادة المحاولة للمدفوعات المتعثرة، المطابقة مع بوابة الدفع، والتسويات الاستثنائية."
-            : "Supervise payment gateway transactions, inspect event logs, trigger safe retries, and record authorized bank exceptions."}
+          {t("supervisePaymentGatewayTransactionsInspect")}
         </p>
       </header>
 

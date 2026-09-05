@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Input, Select, Button, cn } from "@/components/ui/primitives";
 import { Badge } from "@/components/ui/badges";
@@ -45,6 +46,7 @@ export function AuditViewer({
   const [search, setSearch] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<AuditEventRow | null>(null);
 
+  const t = useTranslations("admin");
   const isAr = locale === "ar";
 
   const go = (next: { action?: string; entity?: string; cursor?: string | null }) => {
@@ -80,12 +82,12 @@ export function AuditViewer({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={isAr ? "بحث بالإجراء، الكيان، المعرف، أو الفاعل..." : "Search action, entity ID, actor..."}
+            placeholder={t("searchActionEntityIdActor")}
           />
         </div>
         <div className="w-52">
           <Select value={activeAction} onChange={(e) => go({ action: e.target.value, cursor: null })}>
-            <option value="ALL">{isAr ? "جميع الإجراءات" : "All Actions"}</option>
+            <option value="ALL">{t("allActions")}</option>
             {actionTypes.map((a) => (
               <option key={a} value={a}>
                 {a}
@@ -95,7 +97,7 @@ export function AuditViewer({
         </div>
         <div className="w-44">
           <Select value={activeEntity} onChange={(e) => go({ entity: e.target.value, cursor: null })}>
-            <option value="ALL">{isAr ? "جميع الكيانات" : "All Entities"}</option>
+            <option value="ALL">{t("allEntities")}</option>
             {entityTypes.map((ent) => (
               <option key={ent} value={ent}>
                 {ent}
@@ -112,7 +114,7 @@ export function AuditViewer({
               go({ action: "ALL", entity: "ALL", cursor: null });
             }}
           >
-            {isAr ? "إلغاء التصفية" : "Clear filters"}
+            {t("clearFilters")}
           </Button>
         )}
         <p className="font-mono text-2xs text-ink-30">
@@ -253,13 +255,11 @@ export function AuditViewer({
       {(nextCursor || matchingTotal > events.length) && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-rule bg-paper-raised px-4 py-3">
           <p className="text-2xs text-ink-50">
-            {isAr
-              ? "البحث أعلاه يصفّي هذه الصفحة فقط؛ استخدم عوامل التصفية للبحث في السجل كاملًا."
-              : "Search refines this page; use the filters above to query the whole trail."}
+            {t("searchRefinesPageUseFilters")}
           </p>
           {nextCursor ? (
             <Button size="sm" variant="ghost" onClick={() => go({ cursor: nextCursor })}>
-              {isAr ? "الأقدم ←" : "Older →"}
+              {t("older")}
             </Button>
           ) : null}
         </div>

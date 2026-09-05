@@ -67,19 +67,18 @@ export default async function AdminPoliciesPage({ params }: { params: Promise<{ 
       : null,
   }));
 
+  const t = await getTranslations({ locale, namespace: "admin" });
   const isAr = locale === "ar";
 
   return (
     <div className="space-y-6">
       <header>
-        <Eyebrow>{isAr ? "سياسات التنازل" : "Developer Terms"}</Eyebrow>
+        <Eyebrow>{t("developerTerms")}</Eyebrow>
         <h1 className="mt-1 display-section text-ink">
-          {isAr ? "سياسات المطورين وسجل الإصدارات" : "Developer Assignment Policies & Versioning"}
+          {t("developerAssignmentPoliciesVersioning")}
         </h1>
         <p className="mt-1 text-sm text-ink-50">
-          {isAr
-            ? "شروط التنازل، الرسوم، والحد الأدنى المسدد لكل مطوّر مع حفظ نسخة غير قابلة للتعديل لكل إصدار."
-            : "Manage assignment fees, NOC turnaround timelines, and eligibility rules with immutable version snapshots."}
+          {t("manageAssignmentFeesNocTurnaround")}
         </p>
       </header>
 

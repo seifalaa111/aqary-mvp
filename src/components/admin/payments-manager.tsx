@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import type { PaymentKind, PaymentStatus } from "@prisma/client";
 import { Button, Input, Select, Textarea, cn } from "@/components/ui/primitives";
@@ -58,6 +59,7 @@ export function PaymentsManager({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
+  const t = useTranslations("admin");
   const isAr = locale === "ar";
 
   const filtered = payments.filter((p) => {
@@ -135,12 +137,12 @@ export function PaymentsManager({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={isAr ? "بحث برقم العملية، مرجع الصفقة، أو مرجع البنك..." : "Search payment ID, deal reference, provider ref..."}
+            placeholder={t("searchPaymentIdDealReference")}
           />
         </div>
         <div className="w-44">
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="ALL">{isAr ? "جميع الحالات" : "All Statuses"}</option>
+            <option value="ALL">{t("allStatuses")}</option>
             <option value="INITIATED">INITIATED</option>
             <option value="PROCESSING">PROCESSING</option>
             <option value="SUCCEEDED">SUCCEEDED</option>
@@ -156,7 +158,7 @@ export function PaymentsManager({
               setStatusFilter("ALL");
             }}
           >
-            {isAr ? "إلغاء التصفية" : "Clear filters"}
+            {t("clearFilters")}
           </Button>
         )}
       </div>
@@ -177,12 +179,10 @@ export function PaymentsManager({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg border border-rule bg-paper-raised p-6 shadow-xl space-y-4">
             <h2 className="font-display text-lg text-ink">
-              {isAr ? "تسوية استثنائية للمدفوعات" : "Record Operational Exception"}
+              {t("recordOperationalException")}
             </h2>
             <p className="text-xs text-ink-50">
-              {isAr
-                ? "يُستخدم في حالة سداد المبلغ خارج المنظومة (تحويل بنكي مباشر أو إيداع يدوي). يلزم إدخال مرجع بنكي ومبرر مكتوب."
-                : "Force-settle a payment cleared through off-platform channels (direct bank swift or cashier cheque). Requires verifiable reference and justification."}
+              {t("forceSettlePaymentClearedThrough")}
             </p>
 
             <div>
@@ -290,7 +290,7 @@ export function PaymentsManager({
       {/* Main Table */}
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-rule p-12 text-center text-sm text-ink-50">
-          {isAr ? "لا توجد مدفوعات مطابقة" : "No payments match current filters"}
+          {t("noPaymentsMatchCurrentFilters")}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-rule scrollbar-thin">

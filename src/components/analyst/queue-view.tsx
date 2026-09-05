@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import { Button, Input, Select, cn } from "@/components/ui/primitives";
 import { Badge, SeverityBadge, StatusPill, VerificationScore } from "@/components/ui/badges";
@@ -80,6 +81,7 @@ export function QueueView({
   const [reassignReason, setReassignReason] = useState("");
   const [pending, startTransition] = useTransition();
 
+  const t = useTranslations("analyst");
   const isAr = locale === "ar";
 
   const mineCount = items.filter((i) => i.assignedAnalyst?.id === userId).length;
@@ -353,7 +355,7 @@ export function QueueView({
                     <div className="flex flex-wrap justify-center gap-1">
                       {item.escalatedAt && (
                         <span title={item.escalationReason ?? undefined}>
-                          <Badge tone="flagged">{isAr ? "مُصعَّد" : "escalated"}</Badge>
+                          <Badge tone="flagged">{t("escalated")}</Badge>
                         </span>
                       )}
                       {item.criticalCount > 0 && <SeverityBadge severity="CRITICAL" />}

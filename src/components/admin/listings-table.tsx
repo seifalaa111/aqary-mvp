@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import type { ListingStatus } from "@prisma/client";
 import { Button, Input, Select, Textarea, cn } from "@/components/ui/primitives";
@@ -72,6 +73,7 @@ export function AdminListingsTable({
   const [reassignReason, setReassignReason] = useState("");
   const [reassignError, setReassignError] = useState<string | null>(null);
 
+  const t = useTranslations("admin");
   const isAr = locale === "ar";
 
   const filtered = rows.filter((r) => {
@@ -135,12 +137,12 @@ export function AdminListingsTable({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={isAr ? "بحث بالمرجع، المشروع، الوحدة، البائع..." : "Search reference, project, unit, seller..."}
+            placeholder={t("searchReferenceProjectUnitSeller")}
           />
         </div>
         <div className="w-48">
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="ALL">{isAr ? "جميع الحالات" : "All Statuses"}</option>
+            <option value="ALL">{t("allStatuses")}</option>
             {ALL_STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -157,7 +159,7 @@ export function AdminListingsTable({
               setStatusFilter("ALL");
             }}
           >
-            {isAr ? "إلغاء التصفية" : "Clear filters"}
+            {t("clearFilters")}
           </Button>
         )}
       </div>
@@ -167,12 +169,10 @@ export function AdminListingsTable({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg border border-rule bg-paper-raised p-6 shadow-xl space-y-4">
             <h2 className="font-display text-lg text-ink">
-              {isAr ? "تعديل حالة العقد إداريًا" : "Admin Override Listing Status"}
+              {t("adminOverrideListingStatus")}
             </h2>
             <p className="text-xs text-ink-50">
-              {isAr
-                ? "يتطلب كل تدخل إداري مبررًا مكتوبًا يُحفظ في سجل التدقيق غير القابل للتعديل."
-                : "Every administrative override requires a written justification of at least 10 characters recorded permanently in the audit trail."}
+              {t("everyAdministrativeOverrideRequiresWritten")}
             </p>
 
             {overrideError && <p className="text-xs text-flagged">{overrideError}</p>}
@@ -223,7 +223,7 @@ export function AdminListingsTable({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg border border-rule bg-paper-raised p-6 shadow-xl space-y-4">
             <h2 className="font-display text-lg text-ink">
-              {isAr ? "إعادة إسناد المحلل" : "Reassign Verification Analyst"}
+              {t("reassignVerificationAnalyst")}
             </h2>
 
             {reassignError && <p className="text-xs text-flagged">{reassignError}</p>}
@@ -270,7 +270,7 @@ export function AdminListingsTable({
       {/* Table */}
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-rule p-12 text-center text-sm text-ink-50">
-          {isAr ? "لا توجد عقود مطابقة" : "No listings match the current filters"}
+          {t("noListingsMatchCurrentFilters")}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-rule scrollbar-thin">

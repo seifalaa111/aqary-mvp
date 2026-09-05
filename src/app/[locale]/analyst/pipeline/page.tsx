@@ -28,7 +28,10 @@ export default async function PipelinePage({ params }: { params: Promise<{ local
   const t = await getTranslations({ locale, namespace: "analyst" });
   const tm = await getTranslations({ locale, namespace: "milestone" });
 
+  // Bounded. The board groups a page of deals, not the whole table — an
+  // unbounded findMany here loads every deal ever opened on every render.
   const deals = await prisma.deal.findMany({
+    take: 120,
     include: {
       milestones: { orderBy: { order: "asc" } },
       listing: { select: { reference: true, contract: { select: { unit: { select: { unitCode: true, project: { select: { nameEn: true } } } } } } } },

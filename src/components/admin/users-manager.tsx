@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import type { Role } from "@prisma/client";
 import { Button, Input, Select, Textarea, cn } from "@/components/ui/primitives";
@@ -55,6 +56,7 @@ export function UsersManager({
   const [revealError, setRevealError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Record<string, { nationalId: string | null; phone: string }>>({});
 
+  const t = useTranslations("admin");
   const isAr = locale === "ar";
 
   const filtered = users.filter((u) => {
@@ -122,12 +124,12 @@ export function UsersManager({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={isAr ? "بحث بالاسم، البريد، الهاتف، الرقم القومي..." : "Search name, email, phone, national ID..."}
+            placeholder={t("searchNameEmailPhoneNational")}
           />
         </div>
         <div className="w-44">
           <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-            <option value="ALL">{isAr ? "جميع الأدوار" : "All Roles"}</option>
+            <option value="ALL">{t("allRoles")}</option>
             {AVAILABLE_ROLES.map((r) => (
               <option key={r} value={r}>
                 {r}
@@ -137,7 +139,7 @@ export function UsersManager({
         </div>
         <div className="w-44">
           <Select value={kycFilter} onChange={(e) => setKycFilter(e.target.value)}>
-            <option value="ALL">{isAr ? "جميع حالات KYC" : "All KYC States"}</option>
+            <option value="ALL">{t("allKycStates")}</option>
             <option value="VERIFIED">VERIFIED</option>
             <option value="PENDING">PENDING</option>
             <option value="NOT_STARTED">NOT_STARTED</option>
@@ -154,7 +156,7 @@ export function UsersManager({
               setKycFilter("ALL");
             }}
           >
-            {isAr ? "إلغاء التصفية" : "Clear filters"}
+            {t("clearFilters")}
           </Button>
         )}
       </div>
@@ -164,28 +166,24 @@ export function UsersManager({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md space-y-4 rounded-lg border border-rule bg-paper-raised p-6 shadow-xl">
             <h2 className="font-display text-lg text-ink">
-              {isAr ? "كشف بيانات الهوية" : "Reveal identity data"}
+              {t("revealIdentityData")}
             </h2>
             <p className="text-xs text-ink-50">
-              {isAr
-                ? "سيتم تسجيل هذا الكشف في سجل التدقيق باسمك وبالسبب المذكور."
-                : "This discloses a national ID and phone number. The disclosure is written to the audit trail against your name and the reason you give."}
+              {t("disclosesNationalIdPhoneNumber")}
             </p>
 
             {revealError && <p className="text-xs text-flagged">{revealError}</p>}
 
             <div>
               <label className="mb-1 block text-xs font-medium text-ink-70">
-                {isAr ? "السبب (8 أحرف على الأقل)" : "Reason (minimum 8 characters)"}
+                {t("reasonMinimum8Characters")}
               </label>
               <Textarea
                 rows={3}
                 value={revealReason}
                 onChange={(e) => setRevealReason(e.target.value)}
                 placeholder={
-                  isAr
-                    ? "مثال: مراجعة تطابق الهوية لملف التحقق..."
-                    : "e.g. KYC identity match review for deal AQ-1012..."
+                  t("eGKycIdentityMatch")
                 }
               />
             </div>
@@ -199,13 +197,13 @@ export function UsersManager({
                   setRevealError(null);
                 }}
               >
-                {isAr ? "إلغاء" : "Cancel"}
+                {t("cancel")}
               </Button>
               <Button
                 disabled={pending || revealReason.trim().length < 8}
                 onClick={() => submitReveal(revealing)}
               >
-                {isAr ? "كشف وتسجيل" : "Reveal & log"}
+                {t("revealLog")}
               </Button>
             </div>
           </div>
@@ -216,12 +214,10 @@ export function UsersManager({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg border border-rule bg-paper-raised p-6 shadow-xl space-y-4">
             <h2 className="font-display text-lg text-ink">
-              {isAr ? "تعديل أدوار المستخدم" : "Modify User Roles"}
+              {t("modifyUserRoles")}
             </h2>
             <p className="text-xs text-ink-50">
-              {isAr
-                ? "جميع تعديلات الأدوار تتطلب مبررًا إداريًا يُحفظ في سجل التدقيق."
-                : "Privileged role modifications require an explicit audit justification of at least 8 characters."}
+              {t("privilegedRoleModificationsRequireExplicit")}
             </p>
 
             {roleError && <p className="text-xs text-flagged">{roleError}</p>}
@@ -279,7 +275,7 @@ export function UsersManager({
       {/* Users Table */}
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-rule p-12 text-center text-sm text-ink-50">
-          {isAr ? "لا يوجد مستخدمون يطابقون هذه التصفية" : "No users match current filters"}
+          {t("noUsersMatchCurrentFilters")}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-rule scrollbar-thin">
@@ -319,7 +315,7 @@ export function UsersManager({
                             }
                             className="ms-2 text-ink-50 hover:underline"
                           >
-                            {isAr ? "إخفاء" : "Mask"}
+                            {t("mask")}
                           </button>
                         ) : (
                           <button
@@ -331,7 +327,7 @@ export function UsersManager({
                             }}
                             className="ms-2 text-info hover:underline"
                           >
-                            {isAr ? "كشف (يُسجَّل)" : "Reveal (audited)"}
+                            {t("revealAudited")}
                           </button>
                         )}
                       </div>

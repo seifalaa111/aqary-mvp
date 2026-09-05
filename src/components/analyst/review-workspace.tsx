@@ -282,7 +282,7 @@ export function ReviewWorkspace(props: WorkspaceProps) {
             </p>
           </div>
           <div>
-            <p className="eyebrow">{isAr ? "الحقول المطلوبة" : "Required fields"}</p>
+            <p className="eyebrow">{t("requiredFields")}</p>
             <p
               className={cn(
                 "money text-money-sm font-semibold",
