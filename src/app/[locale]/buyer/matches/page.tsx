@@ -15,6 +15,7 @@ export default async function MatchesPage({ params }: { params: Promise<{ locale
   setRequestLocale(locale);
   const user = await requireRolePage("BUYER");
   const t = await getTranslations({ locale, namespace: "buyer" });
+  const tu = await getTranslations({ locale, namespace: "buyerUi" });
 
   const profile = await prisma.buyerProfile.findUnique({ where: { userId: user.id } });
   if (!profile?.availableCash) {
@@ -51,12 +52,10 @@ export default async function MatchesPage({ params }: { params: Promise<{ locale
 
       {matches.length === 0 ? (
         <EmptyState
-          title="Nothing fits your profile yet"
+          title={tu("nothingFitsYet")}
           body="Widen your cash range or your preferred cities, or check back — new contracts publish as analysts verify them."
           action={
-            <Link href="/buyer/onboarding" className={buttonClass("secondary", "md")}>
-            Adjust my profile
-          </Link>
+            <Link href="/buyer/onboarding" className={buttonClass("secondary", "md")}>{tu("adjustMyProfile")}</Link>
           }
         />
       ) : (

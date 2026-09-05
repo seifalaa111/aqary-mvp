@@ -16,6 +16,7 @@ export default async function SellerDashboard({ params }: { params: Promise<{ lo
   const user = await requireRolePage("SELLER");
   const t = await getTranslations({ locale, namespace: "seller" });
   const tm = await getTranslations({ locale, namespace: "market" });
+  const tu = await getTranslations({ locale, namespace: "sellerUi" });
   const isAr = locale === "ar";
 
   const listings = await prisma.listing.findMany({
@@ -155,9 +156,7 @@ export default async function SellerDashboard({ params }: { params: Promise<{ lo
                           ) : (
                             <>
                               <Link href={`/seller/listings/${l.id}`}>
-                                <Button size="sm" variant="secondary">
-                                  Open file
-                                </Button>
+                                <Button size="sm" variant="secondary">{tu("openFile")}</Button>
                               </Link>
                               {l._count.offers > 0 ? (
                                 <Link href={`/seller/listings/${l.id}/offers`}>

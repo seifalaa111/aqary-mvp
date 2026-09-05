@@ -18,6 +18,7 @@ export default async function BuyerOverviewPage({
   const user = await requireRolePage("BUYER");
   const t = await getTranslations({ locale, namespace: "buyerOverview" });
   const tk = await getTranslations({ locale, namespace: "kycState" });
+  const tu = await getTranslations({ locale, namespace: "buyerUi" });
 
   const [profile, docs, matchCount, offerCount] = await Promise.all([
     prisma.buyerProfile.findUnique({ where: { userId: user.id } }),
@@ -74,16 +75,12 @@ export default async function BuyerOverviewPage({
         <div className="rounded-lg border border-rule bg-paper-raised p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <span className="eyebrow text-ink-50">Upgrade Tier</span>
+              <span className="eyebrow text-ink-50">{tu("upgradeTier")}</span>
               <h2 className="mt-0.5 font-display text-lg text-ink">{t("uploadPof")}</h2>
-              <p className="mt-1 text-xs text-ink-50">
-                Priority Tier buyers get early access to exclusive assignments and fast-track offer presentation.
-              </p>
+              <p className="mt-1 text-xs text-ink-50">{tu("priorityTierExplainer")}</p>
             </div>
             <Link href="/buyer/capacity">
-              <Button variant="secondary" size="sm">
-                Verify Capacity
-              </Button>
+              <Button variant="secondary" size="sm">{tu("verifyCapacity")}</Button>
             </Link>
           </div>
         </div>
@@ -110,25 +107,25 @@ export default async function BuyerOverviewPage({
           </CardHeader>
           <CardBody className="flex flex-col gap-3">
             <div className="flex justify-between text-xs rule-b pb-2">
-              <span className="text-ink-50">Identity Document:</span>
+              <span className="text-ink-50">{tu("identityDocument")}</span>
               <span className="font-medium text-ink">
                 {hasIdDoc ? "On file" : "Missing"}
               </span>
             </div>
             <div className="flex justify-between text-xs rule-b pb-2">
-              <span className="text-ink-50">Proof of Address:</span>
+              <span className="text-ink-50">{tu("proofOfAddress")}</span>
               <span className="font-medium text-ink">
                 {hasAddressDoc ? "On file" : "Missing"}
               </span>
             </div>
             <div className="flex justify-between text-xs rule-b pb-2">
-              <span className="text-ink-50">Uploaded Documents:</span>
+              <span className="text-ink-50">{tu("uploadedDocuments")}</span>
               <span className="font-medium text-ink">{docs.length}</span>
             </div>
             <div className="pt-2">
               <Link href="/buyer/verification">
                 <Button variant="ghost" size="sm" className="w-full">
-                  Manage KYC Documents ?
+                  {tu("manageKycDocuments")} <span aria-hidden className="arrow-forward">→</span>
                 </Button>
               </Link>
             </div>
@@ -138,7 +135,7 @@ export default async function BuyerOverviewPage({
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Financial Capacity</CardTitle>
+              <CardTitle>{tu("financialCapacity")}</CardTitle>
               <Badge tone={tier === "PRIORITY" ? "brass" : tier === "VERIFIED" ? "info" : "neutral"}>
                 {tier} Tier
               </Badge>
@@ -166,7 +163,7 @@ export default async function BuyerOverviewPage({
             <div className="pt-2">
               <Link href="/buyer/capacity">
                 <Button variant="ghost" size="sm" className="w-full">
-                  Update Capacity & Affordability ?
+                  {tu("updateCapacity")} <span aria-hidden className="arrow-forward">→</span>
                 </Button>
               </Link>
             </div>

@@ -18,6 +18,7 @@ export default async function BuyerVerificationPage({
   const t = await getTranslations({ locale, namespace: "buyerNav" });
   const tk = await getTranslations({ locale, namespace: "kycState" });
   const td = await getTranslations({ locale, namespace: "docType" });
+  const tu = await getTranslations({ locale, namespace: "buyerUi" });
 
   const docs = await prisma.document.findMany({
     where: { ownerId: user.id, listingId: null },
@@ -41,42 +42,42 @@ export default async function BuyerVerificationPage({
     {
       type: "NATIONAL_ID_FRONT",
       title: td("NATIONAL_ID_FRONT"),
-      description: "Front face of your valid Egyptian National ID card showing national number and photo.",
+      description: tu("kycNidFrontDesc"),
       required: true,
       doc: findDoc("NATIONAL_ID_FRONT"),
     },
     {
       type: "NATIONAL_ID_BACK",
       title: td("NATIONAL_ID_BACK"),
-      description: "Back face of your Egyptian National ID card.",
+      description: tu("kycNidBackDesc"),
       required: false,
       doc: findDoc("NATIONAL_ID_BACK"),
     },
     {
       type: "PASSPORT",
       title: td("PASSPORT"),
-      description: "Valid passport photo page (required for non-Egyptian citizens or expats).",
+      description: tu("kycPassportDesc"),
       required: false,
       doc: findDoc("PASSPORT"),
     },
     {
       type: "PROOF_OF_ADDRESS",
       title: td("PROOF_OF_ADDRESS"),
-      description: "Recent utility bill (electricity, water, gas) or bank statement showing residential address.",
+      description: tu("kycAddressDesc"),
       required: true,
       doc: findDoc("PROOF_OF_ADDRESS"),
     },
     {
       type: "PROOF_OF_FUNDS",
       title: td("PROOF_OF_FUNDS"),
-      description: "Bank statement (last 3 months) or certificate of deposit to unlock Priority Tier status.",
+      description: tu("kycFundsDesc"),
       required: false,
       doc: findDoc("PROOF_OF_FUNDS"),
     },
     {
       type: "EMPLOYMENT_PROOF",
       title: td("EMPLOYMENT_PROOF"),
-      description: "HR salary certificate or company commercial register if self-employed.",
+      description: tu("kycEmploymentDesc"),
       required: false,
       doc: findDoc("EMPLOYMENT_PROOF"),
     },
@@ -88,10 +89,8 @@ export default async function BuyerVerificationPage({
         <div className="flex items-center justify-between">
           <div>
             <Eyebrow>{t("verification")}</Eyebrow>
-            <h1 className="mt-1 font-display text-2xl text-ink md:text-3xl">Identity & KYC Verification</h1>
-            <p className="mt-1 text-sm text-ink-50">
-              Upload your identification documents to activate full buying privileges and make binding offers.
-            </p>
+            <h1 className="mt-1 font-display text-2xl text-ink md:text-3xl">{tu("identityKycVerification")}</h1>
+            <p className="mt-1 text-sm text-ink-50">{tu("uploadIdentityExplainer")}</p>
           </div>
           <Badge
             tone={
@@ -105,11 +104,21 @@ export default async function BuyerVerificationPage({
             {user.kycStatus}
           </Badge>
         </div>
+
+        {/* A VERIFIED badge above a checklist of nothing but "Missing" reads as a
+            contradiction. It is not — an analyst can verify an identity from
+            evidence taken outside this vault — but the page has to say so
+            rather than leave the reader to reconcile the two. */}
+        {user.kycStatus === "VERIFIED" && slots.every((slot) => !slot.doc) ? (
+          <p className="mt-4 rounded-md border border-rule bg-paper-sunken px-4 py-3 text-xs leading-relaxed text-ink-70">
+            {t("verifiedWithoutVaultDocuments")}
+          </p>
+        ) : null}
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle>Required Verification Checklist</CardTitle>
+          <CardTitle>{tu("requiredVerificationChecklist")}</CardTitle>
         </CardHeader>
         <CardBody>
           <KycChecklist slots={slots} locale={locale} />

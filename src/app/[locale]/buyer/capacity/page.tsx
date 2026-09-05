@@ -18,6 +18,7 @@ export default async function BuyerCapacityPage({
   setRequestLocale(locale);
   const user = await requireRolePage("BUYER");
   const t = await getTranslations({ locale, namespace: "capacity" });
+  const tu = await getTranslations({ locale, namespace: "buyerUi" });
 
   const profile = await prisma.buyerProfile.findUnique({
     where: { userId: user.id },
@@ -37,7 +38,7 @@ export default async function BuyerCapacityPage({
         <div className="flex items-center justify-between">
           <div>
             <Eyebrow>{t("title")}</Eyebrow>
-            <h1 className="mt-1 font-display text-2xl text-ink md:text-3xl">Financial Capacity</h1>
+            <h1 className="mt-1 font-display text-2xl text-ink md:text-3xl">{tu("financialCapacity")}</h1>
             <p className="mt-1 text-sm text-ink-50">{t("sub")}</p>
           </div>
           <Badge tone={isPriority ? "brass" : profile?.tier === "VERIFIED" ? "info" : "neutral"}>
@@ -61,13 +62,13 @@ export default async function BuyerCapacityPage({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-sm border border-rule-subtle bg-paper-subtle p-3">
-              <span className="text-2xs text-ink-50">Verified Available Cash:</span>
+              <span className="text-2xs text-ink-50">{tu("verifiedAvailableCash")}</span>
               <div className="money mt-1 text-lg font-semibold text-ink">
                 {verifiedCash ? egp(verifiedCash) : "None on file"}
               </div>
             </div>
             <div className="rounded-sm border border-rule-subtle bg-paper-subtle p-3">
-              <span className="text-2xs text-ink-50">Verified Max Installment:</span>
+              <span className="text-2xs text-ink-50">{tu("verifiedMaxInstallment")}</span>
               <div className="money mt-1 text-lg font-semibold text-ink">
                 {verifiedInstallment ? egp(verifiedInstallment) : "None on file"}
               </div>
@@ -76,13 +77,10 @@ export default async function BuyerCapacityPage({
 
           {!verifiedCash ? (
             <div className="flex items-center justify-between rounded-sm border border-brass/30 bg-brass/5 p-3">
-              <div className="text-xs text-ink-70">
-                Want to unlock <strong>Priority Buyer</strong> status? Submit a recent bank statement or proof of funds.
+              <div className="text-xs text-ink-70">{tu("wantToUnlock")}<strong>{tu("priorityBuyer")}</strong> status? Submit a recent bank statement or proof of funds.
               </div>
               <Link href="/buyer/verification">
-                <Button size="sm" variant="secondary">
-                  Upload Proof of Funds
-                </Button>
+                <Button size="sm" variant="secondary">{tu("uploadProofOfFunds")}</Button>
               </Link>
             </div>
           ) : null}

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ViewRecorder } from "@/components/opportunity/view-recorder";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { prisma } from "@/lib/db";
@@ -86,10 +87,6 @@ export default async function OpportunityPage({
       : null,
   ]);
 
-  // A view is a real view. Counted once per request on the public page.
-  if (isPublic) {
-    await prisma.listing.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => undefined);
-  }
 
   // The same breakdown the cost panel renders — not a second computation.
   const requiredNow = cost.cashRequiredNow;
@@ -124,6 +121,7 @@ export default async function OpportunityPage({
 
   return (
     <div className="shell-wide py-6 pb-24 md:py-9 lg:pb-9">
+      {isPublic ? <ViewRecorder listingId={id} /> : null}
       <nav className="mb-5">
         <Link href="/opportunities" className="text-xs text-ink-50 hover:text-ink">
           <span className="arrow-forward inline-block">←</span> {t("backToMarket")}

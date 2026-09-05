@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireRolePage } from "@/lib/auth/guard";
 import { storage } from "@/lib/providers/storage";
 import { checkPublishReadiness } from "@/lib/services/listings";
-import { reconcileListing } from "@/lib/services/reconciliation";
+import { readReconciliation } from "@/lib/services/reconciliation";
 import { REQUIRED_VERIFIED_FIELDS } from "@/lib/domain/fields";
 import { ReviewWorkspace } from "@/components/analyst/review-workspace";
 
@@ -45,8 +45,11 @@ export default async function AnalystListingPage({
 
   if (!listing) notFound();
 
-  // Reconciliation is recomputed on open so the panel is never stale.
-  const recon = await reconcileListing(id).catch(() => null);
+  // Recomputed on open so the panel is never stale — but read-only. Rendering a
+  // page must not open discrepancies or rewrite receiptDerived columns, and a
+  // failure here must not be swallowed into a blank panel: an analyst who sees
+  // no reconciliation would take that for "nothing disagrees".
+  const recon = await readReconciliation(id);
   const readiness = await checkPublishReadiness(id);
 
   const docs = await Promise.all(

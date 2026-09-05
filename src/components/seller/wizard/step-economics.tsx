@@ -28,6 +28,7 @@ export function StepEconomics({
   locale: string;
 }) {
   const t = useTranslations("seller");
+  const tu = useTranslations("sellerUi");
   const set = (k: string) => (v: unknown) => onChange({ ...value, [k]: v });
   const n = (k: string) => Number(value[k] ?? 0) || 0;
   const specials = (value.specialPayments as Special[]) ?? [];
@@ -110,8 +111,8 @@ export function StepEconomics({
         <Field label="Payment frequency" htmlFor="frequency" required>
           <Select id="frequency" value={String(value.frequency ?? "QUARTERLY")} onChange={(e) => set("frequency")(e.target.value)}>
             <option value="MONTHLY">Monthly</option>
-            <option value="QUARTERLY">Quarterly</option>
-            <option value="SEMI_ANNUAL">Semi-annual</option>
+            <option value="QUARTERLY">{tu("freqQuarterly")}</option>
+            <option value="SEMI_ANNUAL">{tu("freqSemiAnnual")}</option>
             <option value="ANNUAL">Annual</option>
           </Select>
         </Field>
@@ -126,9 +127,7 @@ export function StepEconomics({
       {/* ---- Special / milestone payments ---- */}
       <div className="rounded-md border border-rule bg-paper-sunken/50 p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-medium text-ink-70">
-            Milestone payments (delivery payment, balloon payment)
-          </p>
+          <p className="text-xs font-medium text-ink-70">{tu("milestonePayments")}</p>
           <Button
             size="sm"
             variant="secondary"
@@ -140,16 +139,14 @@ export function StepEconomics({
           </Button>
         </div>
         {specials.length === 0 ? (
-          <p className="text-2xs text-ink-50">
-            None. Add one if your plan has a large payment at delivery or handover — buyers need to see it.
-          </p>
+          <p className="text-2xs text-ink-50">{tu("noMilestoneHint")}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {specials.map((s, i) => (
               <li key={i} className="grid gap-2 sm:grid-cols-[1fr_140px_120px_auto]">
                 <Input
                   value={s.label}
-                  placeholder="Label"
+                  placeholder={tu("labelPlaceholder")}
                   onChange={(e) => {
                     const next = [...specials];
                     next[i] = { ...s, label: e.target.value };
@@ -160,7 +157,7 @@ export function StepEconomics({
                   type="number"
                   className="money"
                   value={s.amount}
-                  placeholder="Amount"
+                  placeholder={tu("amountPlaceholder")}
                   onChange={(e) => {
                     const next = [...specials];
                     next[i] = { ...s, amount: Number(e.target.value) };
@@ -171,7 +168,7 @@ export function StepEconomics({
                   type="number"
                   className="money"
                   value={s.monthOffset}
-                  placeholder="Month"
+                  placeholder={tu("monthPlaceholder")}
                   onChange={(e) => {
                     const next = [...specials];
                     next[i] = { ...s, monthOffset: Number(e.target.value) };
@@ -202,7 +199,7 @@ export function StepEconomics({
 
       {/* ---- The two figures the whole deal turns on ---- */}
       <div className="rounded-md border border-brass/30 bg-brass-soft p-4">
-        <p className="eyebrow mb-3 text-brass">What you have paid so far</p>
+        <p className="eyebrow mb-3 text-brass">{tu("whatYouHavePaid")}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Total paid to date" htmlFor="totalPaid" required error={errors.totalPaid}>
             <MoneyInput id="totalPaid" locale={locale} value={String(value.totalPaid ?? "")} onChange={(e) => set("totalPaid")(e.target.value)} />
@@ -218,7 +215,7 @@ export function StepEconomics({
 
         {scheduleSaysPaid !== null && declaredPaid > 0 && gap > 0.05 ? (
           <div className="mt-3">
-            <Callout tone="pending" title="These two do not agree yet">
+            <Callout tone="pending" title={tu("theseDoNotAgree")}>
               Your plan says {egp(scheduleSaysPaid, { decimals: 0 })} should have fallen due by today, but you
               have entered {egp(declaredPaid, { decimals: 0 })}. Either is possible — people pay ahead and
               people fall behind — and your receipts will settle it. We flag it now so it is not a surprise
@@ -232,7 +229,7 @@ export function StepEconomics({
       {preview ? (
         <div className="rounded-md border border-rule bg-paper-raised p-4">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-xs font-medium text-ink-70">Your payment plan, rebuilt</p>
+            <p className="text-xs font-medium text-ink-70">{tu("planRebuilt")}</p>
             <p className="money text-2xs text-ink-50">
               {preview.rows.length} payments · last {formatDate(preview.last?.dueDate, locale)}
             </p>
@@ -270,9 +267,7 @@ export function StepEconomics({
         </div>
         <div className="flex flex-col gap-3">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-70">
-            <input type="checkbox" checked={Boolean(value.hasBankFinance)} onChange={(e) => set("hasBankFinance")(e.target.checked)} className="size-4 accent-ink" />
-            There is bank finance or a lien on the unit
-          </label>
+            <input type="checkbox" checked={Boolean(value.hasBankFinance)} onChange={(e) => set("hasBankFinance")(e.target.checked)} className="size-4 accent-ink" />{tu("hasLien")}</label>
           {value.hasBankFinance ? (
             <Field label="Details" htmlFor="lienNote">
               <Input id="lienNote" value={String(value.lienNote ?? "")} onChange={(e) => set("lienNote")(e.target.value)} />
@@ -286,7 +281,7 @@ export function StepEconomics({
           <Select id="assignmentPermitted" value={String(value.assignmentPermitted ?? "UNKNOWN")} onChange={(e) => set("assignmentPermitted")(e.target.value)}>
             <option value="UNKNOWN">I am not sure</option>
             <option value="ALLOWED">Yes</option>
-            <option value="CONDITIONAL">Yes, with conditions</option>
+            <option value="CONDITIONAL">{tu("yesWithConditions")}</option>
             <option value="NOT_ALLOWED">No</option>
           </Select>
         </Field>

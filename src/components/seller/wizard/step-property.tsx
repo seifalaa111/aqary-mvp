@@ -33,6 +33,7 @@ export function StepProperty({
 }) {
   const t = useTranslations("seller");
   const tu = useTranslations("unitType");
+  const tx = useTranslations("sellerUi");
   const tf = useTranslations("finishing");
   const isAr = locale === "ar";
   const set = (k: string) => (v: unknown) => onChange({ ...value, [k]: v });
@@ -53,9 +54,7 @@ export function StepProperty({
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="font-display text-xl text-ink">{t("step2")}</h2>
-        <p className="mt-1 text-sm text-ink-50">
-          Copy the unit code exactly as printed on your contract — it is how the developer finds your file.
-        </p>
+        <p className="mt-1 text-sm text-ink-50">{tx("copyUnitCodeExactly")}</p>
       </div>
 
       <Field label="Developer" htmlFor="developer" required error={errors.projectId}>
@@ -67,15 +66,13 @@ export function StepProperty({
               setDevQuery(e.target.value);
               onChange({ ...value, developerId: "", projectId: "" });
             }}
-            placeholder="Start typing — Talaat Moustafa, SODIC, Palm Hills…"
+            placeholder={tx("developerSearchPlaceholder")}
             autoComplete="off"
           />
           {!developer && devQuery.trim().length > 0 ? (
             <ul className="mt-1 max-h-52 overflow-y-auto rounded-sm border border-rule bg-paper-raised shadow-e2 scrollbar-thin">
               {matches.length === 0 ? (
-                <li className="px-3 py-2 text-xs text-ink-50">
-                  No developer matches that. Try the Arabic or English name.
-                </li>
+                <li className="px-3 py-2 text-xs text-ink-50">{tx("noDeveloperMatch")}</li>
               ) : (
                 matches.map((d) => (
                   <li key={d.id}>
@@ -105,7 +102,7 @@ export function StepProperty({
             value={String(value.projectId ?? "")}
             onChange={(e) => set("projectId")(e.target.value)}
           >
-            <option value="">Choose the project</option>
+            <option value="">{tx("chooseProject")}</option>
             {developer.projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {(isAr ? p.nameAr : p.nameEn)} — {p.city}
@@ -167,7 +164,7 @@ export function StepProperty({
         </Field>
         <Field label="View" htmlFor="view">
           <Select id="view" value={String(value.view ?? "")} onChange={(e) => set("view")(e.target.value)}>
-            <option value="">Not specified</option>
+            <option value="">{tx("notSpecified")}</option>
             {VIEWS.map((v) => (
               <option key={v} value={v}>
                 {v}
@@ -204,9 +201,9 @@ export function StepProperty({
         </Field>
         <Field label="Delivery status" htmlFor="deliveryStatus" required>
           <Select id="deliveryStatus" value={String(value.deliveryStatus ?? "NOT_DELIVERED")} onChange={(e) => set("deliveryStatus")(e.target.value)}>
-            <option value="NOT_DELIVERED">Not delivered yet</option>
-            <option value="DELIVERED">Delivered / handed over</option>
-            <option value="DELAYED">Delayed past the contractual date</option>
+            <option value="NOT_DELIVERED">{tx("notDeliveredYet")}</option>
+            <option value="DELIVERED">{tx("deliveredHandedOver")}</option>
+            <option value="DELAYED">{tx("delayedPastContractual")}</option>
           </Select>
         </Field>
       </div>

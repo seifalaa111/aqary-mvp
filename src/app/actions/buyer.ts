@@ -274,3 +274,22 @@ export async function deleteSavedSearch(id: string): Promise<ActionResult> {
     return fail(err);
   }
 }
+
+/**
+ * Increments a listing's view counter.
+ *
+ * Deliberately unauthenticated and deliberately not a render side effect: it is
+ * called once from the client after the opportunity page mounts. Only
+ * publicly-visible listings are countable, so the counter cannot be used to
+ * probe whether a private or unpublished listing id exists.
+ */
+export async function recordListingView(listingId: string): Promise<void> {
+  await prisma.listing.updateMany({
+    where: {
+      id: listingId,
+      isPrivate: false,
+      status: { in: ["LISTED", "UNDER_OFFER"] },
+    },
+    data: { viewCount: { increment: 1 } },
+  });
+}

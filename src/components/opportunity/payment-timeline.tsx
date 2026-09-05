@@ -60,7 +60,7 @@ export function PaymentTimeline({
   const regular = rows.filter((r) => r.kind === "REGULAR").map((r) => Number(r.amount));
   const max = regular.length > 0 ? Math.max(...regular) : Math.max(...rows.map((r) => Number(r.amount)));
   const paidCount = rows.filter(
-    (r) => r.status === "PAID" || (!r.status && new Date(r.dueDate).getTime() <= now),
+    (r) => r.status === "PAID",
   ).length;
 
   // Receipts are matched to instalments by nearest date within 45 days.
@@ -98,7 +98,8 @@ export function PaymentTimeline({
         <div className="overflow-x-auto pb-2 scrollbar-thin">
           <div className="flex min-w-full items-end gap-1" style={{ height: 140 }}>
             {rows.map((r) => {
-              const isPaid = r.status === "PAID" || (!r.status && new Date(r.dueDate).getTime() <= now);
+              // Past due is not paid. Only the recorded status settles an instalment.
+              const isPaid = r.status === "PAID";
               const isOverdue = r.status === "OVERDUE";
               const isUnverified = r.status === "UNVERIFIED";
               const isDue = r.status === "DUE";

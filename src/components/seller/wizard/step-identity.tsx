@@ -24,6 +24,7 @@ export function StepIdentity({
 }) {
   const t = useTranslations("seller");
   const ta = useTranslations("auth");
+  const tu = useTranslations("sellerUi");
   const set = (k: string) => (v: unknown) => onChange({ ...value, [k]: v });
 
   const idCheck = parseNationalId(String(value.nationalId ?? ""));
@@ -34,9 +35,7 @@ export function StepIdentity({
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="font-display text-xl text-ink">{t("step1")}</h2>
-        <p className="mt-1 text-sm text-ink-50">
-          The developer will only process an assignment for the person named on the contract.
-        </p>
+        <p className="mt-1 text-sm text-ink-50">{tu("developerNamedPersonOnly")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -122,9 +121,7 @@ export function StepIdentity({
 
       {coOwnerCount > 0 ? (
         <div className="flex flex-col gap-3 rounded-md bg-paper-sunken p-4">
-          <p className="text-xs font-medium text-ink-70">
-            Every co-owner must consent before the developer will register an assignment.
-          </p>
+          <p className="text-xs font-medium text-ink-70">{tu("allCoOwnersMustConsent")}</p>
           {Array.from({ length: coOwnerCount }).map((_, i) => (
             <Input
               key={i}
@@ -149,9 +146,9 @@ export function StepIdentity({
             value={String(value.preferredContactWindow ?? "")}
             onChange={(e) => set("preferredContactWindow")(e.target.value)}
           >
-            <option value="">No preference</option>
+            <option value="">{tu("noPreference")}</option>
             <option value="Morning">Morning</option>
-            <option value="Afternoon">Afternoon</option>
+            <option value="Afternoon">{tu("afternoon")}</option>
             <option value="Evening">Evening</option>
           </Select>
         </Field>
@@ -161,13 +158,11 @@ export function StepIdentity({
             checked={Boolean(value.whatsappOptIn)}
             onChange={(e) => set("whatsappOptIn")(e.target.checked)}
             className="size-4 accent-ink"
-          />
-          Contact me on WhatsApp
-        </label>
+          />{tu("contactOnWhatsapp")}</label>
       </div>
 
       <div className="rule-t pt-6">
-        <p className="eyebrow mb-3">Identity documents</p>
+        <p className="eyebrow mb-3">{tu("identityDocuments")}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <UploadZone
             listingId={listingId}

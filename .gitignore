@@ -26,3 +26,4 @@ coverage/
 
 # Local spec / prompt notes
 *.txt
+test-results/

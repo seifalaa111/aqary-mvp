@@ -33,6 +33,7 @@ export function BuyerOnboarding({
 }) {
   const t = useTranslations("buyer");
   const tu = useTranslations("unitType");
+  const tx = useTranslations("buyerUi");
   const router = useRouter();
   const isAr = locale === "ar";
 
@@ -157,8 +158,8 @@ export function BuyerOnboarding({
                     onChange={(e) => set("installmentFrequency", e.target.value)}
                   >
                     <option value="MONTHLY">Monthly</option>
-                    <option value="QUARTERLY">Quarterly</option>
-                    <option value="SEMI_ANNUAL">Semi-annual</option>
+                    <option value="QUARTERLY">{tx("freqQuarterly")}</option>
+                    <option value="SEMI_ANNUAL">{tx("freqSemiAnnual")}</option>
                     <option value="ANNUAL">Annual</option>
                   </Select>
                 </Field>
@@ -169,10 +170,10 @@ export function BuyerOnboarding({
                   <Select id="income" value={form.incomeRange} onChange={(e) => set("incomeRange", e.target.value)}>
                     <option value="">Choose</option>
                     <option value="under EGP 30k / month">under EGP 30k / month</option>
-                    <option value="EGP 30k–60k / month">EGP 30k–60k / month</option>
-                    <option value="EGP 60k–120k / month">EGP 60k–120k / month</option>
-                    <option value="EGP 120k–200k / month">EGP 120k–200k / month</option>
-                    <option value="EGP 200k+ / month">EGP 200k+ / month</option>
+                    <option value="EGP 30k–60k / month">{tx("income30to60")}</option>
+                    <option value="EGP 60k–120k / month">{tx("income60to120")}</option>
+                    <option value="EGP 120k–200k / month">{tx("income120to200")}</option>
+                    <option value="EGP 200k+ / month">{tx("income200plus")}</option>
                   </Select>
                 </Field>
                 <Field label={t("employmentType")} htmlFor="employment" required>
@@ -182,10 +183,10 @@ export function BuyerOnboarding({
                     onChange={(e) => set("employmentType", e.target.value)}
                   >
                     <option value="">Choose</option>
-                    <option value="Employee">Employee</option>
-                    <option value="Business owner">Business owner</option>
-                    <option value="Freelancer">Freelancer</option>
-                    <option value="Expatriate remittance">Expatriate remittance</option>
+                    <option value="Employee">{tx("empEmployee")}</option>
+                    <option value="Business owner">{tx("empBusinessOwner")}</option>
+                    <option value="Freelancer">{tx("empFreelancer")}</option>
+                    <option value="Expatriate remittance">{tx("empExpatRemittance")}</option>
                   </Select>
                 </Field>
               </div>
@@ -195,18 +196,18 @@ export function BuyerOnboarding({
                   <Select id="purpose" value={form.purchasePurpose} onChange={(e) => set("purchasePurpose", e.target.value)}>
                     <option value="">Choose</option>
                     <option value="Own use">Own use</option>
-                    <option value="Investment">Investment</option>
+                    <option value="Investment">{tx("purposeInvestment")}</option>
                     <option value="Upgrade">Upgrade</option>
-                    <option value="Downsize">Downsize</option>
+                    <option value="Downsize">{tx("purposeDownsize")}</option>
                   </Select>
                 </Field>
                 <Field label={t("readiness")} htmlFor="readiness" required>
                   <Select id="readiness" value={form.readiness} onChange={(e) => set("readiness", e.target.value)}>
                     <option value="">Choose</option>
-                    <option value="Just exploring">Just exploring</option>
-                    <option value="Ready in 90 days">Ready in 90 days</option>
-                    <option value="Ready in 30 days">Ready in 30 days</option>
-                    <option value="Ready now">Ready now</option>
+                    <option value="Just exploring">{tx("readinessExploring")}</option>
+                    <option value="Ready in 90 days">{tx("readiness90")}</option>
+                    <option value="Ready in 30 days">{tx("readiness30")}</option>
+                    <option value="Ready now">{tx("readinessNow")}</option>
                   </Select>
                 </Field>
               </div>
@@ -343,9 +344,7 @@ export function BuyerOnboarding({
                   step === 1 &&
                   (!form.incomeRange || !form.employmentType || !form.purchasePurpose || !form.readiness)
                 }
-              >
-                Continue →
-              </Button>
+              >{tx("continueAction")}</Button>
             ) : (
               <Button size="lg" loading={pending} onClick={submit}>
                 {t("finish")}

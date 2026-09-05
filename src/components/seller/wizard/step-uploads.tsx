@@ -205,6 +205,7 @@ function MediaUploader({
   locale: string;
 }) {
   const tc = useTranslations("common");
+  const tu = useTranslations("sellerUi");
   const inputRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState("PHOTO");
   const [roomTag, setRoomTag] = useState("LIVING");
@@ -261,11 +262,11 @@ function MediaUploader({
           <span className="text-xs font-medium text-ink-70">{isAr ? "نوع الصورة" : "What is this image?"}</span>
           <Select value={kind} onChange={(e) => setKind(e.target.value)}>
             <option value="PHOTO">A photograph of this unit</option>
-            <option value="SHOW_UNIT">The developer&apos;s show unit / a comparable finished unit</option>
+            <option value="SHOW_UNIT">{tu("showUnitOption")}</option>
             <option value="RENDER">A developer render (computer-generated)</option>
-            <option value="PROGRESS">Construction progress</option>
-            <option value="FLOOR_PLAN">Unit floor plan</option>
-            <option value="MASTER_PLAN">Project master plan</option>
+            <option value="PROGRESS">{tu("constructionProgress")}</option>
+            <option value="FLOOR_PLAN">{tu("unitFloorPlan")}</option>
+            <option value="MASTER_PLAN">{tu("projectMasterPlan")}</option>
           </Select>
         </label>
         {!["FLOOR_PLAN", "MASTER_PLAN"].includes(kind) ? (
@@ -305,7 +306,7 @@ function MediaUploader({
             e.target.value = "";
           }}
         />
-        <span className="text-2xs text-ink-30">JPEG, PNG or WebP · up to 25 MB each</span>
+        <span className="text-2xs text-ink-30">{tu("imageFormatsHint")}</span>
       </div>
     </div>
   );

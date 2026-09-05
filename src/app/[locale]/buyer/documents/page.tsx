@@ -15,6 +15,7 @@ export default async function BuyerDocumentsPage({
   setRequestLocale(locale);
   const user = await requireRolePage("BUYER");
   const t = await getTranslations({ locale, namespace: "buyerDocuments" });
+  const tu = await getTranslations({ locale, namespace: "buyerUi" });
 
   const docs = await prisma.document.findMany({
     where: { ownerId: user.id, listingId: null },
@@ -36,7 +37,7 @@ export default async function BuyerDocumentsPage({
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <header>
         <Eyebrow>{t("title")}</Eyebrow>
-        <h1 className="mt-1 font-display text-2xl text-ink md:text-3xl">Personal Documents Vault</h1>
+        <h1 className="mt-1 font-display text-2xl text-ink md:text-3xl">{tu("personalDocumentsVault")}</h1>
         <p className="mt-1 text-sm text-ink-50">{t("sub")}</p>
       </header>
 

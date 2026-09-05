@@ -450,3 +450,28 @@ standing in for one. It is flagged here, in `ASSETS.md` and in the site footer.
 - **`daysListed` reads as 0 on seeded listings** because they all publish during
   the seed run. It is computed from `publishedAt`, so it is correct — just
   uninteresting until the data ages.
+- **The staff console is English-only.** The public site and both transacting
+  surfaces — buyer and seller — are fully bilingual, and
+  `tests/unit/i18n-parity.test.ts` fails the build if English copy reappears
+  there. The analyst and admin consoles still carry ~159 English literals in
+  JSX. That is a scope decision, not an oversight: internal tooling is used by
+  staff we hire, the surfaces a customer must complete a transaction on are not.
+  The same test guards the console against the *bilingual ternary* pattern, so
+  the two catalogues stay at parity either way.
+- **Every seeded buyer is `kycStatus: VERIFIED` with no documents in the vault.**
+  The seed grants the status directly rather than manufacturing identity
+  documents it has no bytes for. The buyer's verification page states this
+  rather than showing a VERIFIED badge over a checklist of nothing but
+  "Missing". A real deployment reaches VERIFIED only through
+  `reviewKyc`, which requires an analyst and writes an audit event.
+- **`DocumentPage.textSnippet` is null on every seeded page.** The seed ships
+  image documents, and text extraction only runs for PDFs
+  (`src/lib/services/pdf.ts`, exercised against a real fixture in
+  `tests/unit/phase2-qualification-privacy.test.ts`). The consequence is that
+  the assistant's page corpus is empty for seeded listings: it answers from the
+  verified contract record, and cites no document pages until a PDF is uploaded.
+  The pipeline is real; the demo data does not exercise it.
+- **The OTP attempt check is read-then-write.** Two verification requests racing
+  can each observe `attempts < OTP_MAX_ATTEMPTS`. Brute-forcing a six-digit code
+  through that window is not practical, so it is left as-is rather than
+  serialised, but it is not a strict counter.

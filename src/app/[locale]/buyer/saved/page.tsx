@@ -15,6 +15,7 @@ export default async function SavedPage({ params }: { params: Promise<{ locale: 
   setRequestLocale(locale);
   const user = await requireRolePage("BUYER");
   const t = await getTranslations({ locale, namespace: "buyer" });
+  const tu = await getTranslations({ locale, namespace: "buyerUi" });
 
   const [saved, searches] = await Promise.all([
     prisma.savedListing.findMany({
@@ -34,9 +35,7 @@ export default async function SavedPage({ params }: { params: Promise<{ locale: 
             title={t("savedListings")}
             body="Nothing saved yet."
             action={
-              <Link href="/opportunities" className={buttonClass("primary", "md")}>
-            Browse opportunities
-          </Link>
+              <Link href="/opportunities" className={buttonClass("primary", "md")}>{tu("browseOpportunities")}</Link>
             }
           />
         ) : (
@@ -52,7 +51,7 @@ export default async function SavedPage({ params }: { params: Promise<{ locale: 
         <Eyebrow>{t("savedSearches")}</Eyebrow>
         <h2 className="mb-4 mt-1 font-display text-xl text-ink">{t("savedSearches")}</h2>
         {searches.length === 0 ? (
-          <p className="text-sm text-ink-50">No saved searches.</p>
+          <p className="text-sm text-ink-50">{tu("noSavedSearches")}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {searches.map((s) => (
@@ -72,7 +71,7 @@ export default async function SavedPage({ params }: { params: Promise<{ locale: 
                       return acc;
                     }, {}),
                   ).toString()}`}>
-                    <Button size="sm" variant="secondary">Run this search</Button>
+                    <Button size="sm" variant="secondary">{tu("runThisSearch")}</Button>
                   </Link>
                 </CardBody>
               </Card>

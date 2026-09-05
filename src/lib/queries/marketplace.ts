@@ -216,21 +216,27 @@ export async function queryMarketplace(args: {
   // else it falls back to verification strength.
   const useMatchOrder = args.sort === "best-match" && Boolean(args.buyerId);
 
+  // Best match ranks by Match.score, so the query is rooted on Match rather than
+  // Listing: the sort happens in SQL, the page is a real skip/take, and — the
+  // part that was wrong — the total counts the population actually being paged.
+  // Counting every listing that passes the filters while paging only the ones
+  // the buyer has a Match for overstated the result count and left the tail
+  // pages blank. Loading 500 rows to sort them in JS also went quietly wrong
+  // above 500 matches.
+  const matchWhere = { buyerId: args.buyerId!, listing: where };
+
   const [total, items] = await Promise.all([
-    prisma.listing.count({ where }),
+    useMatchOrder ? prisma.match.count({ where: matchWhere }) : prisma.listing.count({ where }),
     useMatchOrder
-      ? prisma.listing
+      ? prisma.match
           .findMany({
-            where: { ...where, matches: { some: { buyerId: args.buyerId! } } },
-            select: { ...CARD_SELECT, matches: { where: { buyerId: args.buyerId! }, select: { score: true } } },
-            orderBy: [{ matches: { _count: "desc" } }],
-            take: 500,
+            where: matchWhere,
+            select: { listing: { select: CARD_SELECT } },
+            orderBy: [{ score: "desc" }, { listingId: "asc" }],
+            skip: (args.page - 1) * pageSize,
+            take: pageSize,
           })
-          .then((rows) =>
-            rows
-              .sort((a, b) => (b.matches[0]?.score ?? 0) - (a.matches[0]?.score ?? 0))
-              .slice((args.page - 1) * pageSize, args.page * pageSize),
-          )
+          .then((rows) => rows.map((r) => r.listing))
       : prisma.listing.findMany({
           where,
           select: CARD_SELECT,

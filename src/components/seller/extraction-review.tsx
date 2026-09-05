@@ -72,6 +72,7 @@ export function ExtractionReview({
   const t = useTranslations("seller");
   const tl = useTranslations("fieldLabel");
   const td = useTranslations("docType");
+  const tu = useTranslations("sellerUi");
   const router = useRouter();
   const isAr = locale === "ar";
 
@@ -250,9 +251,7 @@ export function ExtractionReview({
                               }
                             })
                           }
-                        >
-                          Save correction
-                        </Button>
+                        >{tu("saveCorrection")}</Button>
                         <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
                           Cancel
                         </Button>

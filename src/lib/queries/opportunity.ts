@@ -86,10 +86,12 @@ export async function getOpportunity(listingId: string) {
 
   // Remaining schedule, computed from the verified installments the analyst
   // signed off — never typed, never taken from the seller's declaration.
-  const now = new Date();
   const schedule = listing.contract.installments;
-  const paidRows = schedule.filter((r) => (r.status ? r.status === "PAID" : r.dueDate <= now));
-  const upcoming = schedule.filter((r) => (r.status ? r.status !== "PAID" : r.dueDate > now));
+  // Paid means an installment carries PAID status. A due date in the past is
+  // not evidence of payment — an overdue instalment is an obligation the buyer
+  // inherits, and counting it as settled would understate what they take on.
+  const paidRows = schedule.filter((r) => r.status === "PAID");
+  const upcoming = schedule.filter((r) => r.status !== "PAID");
   const remainingSum = upcoming.reduce((a, r) => a.plus(money(r.amount.toString())), money(0));
 
   const maintenanceAndClub = money(numOf(fields, "MAINTENANCE_DEPOSIT")).plus(

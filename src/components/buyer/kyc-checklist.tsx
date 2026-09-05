@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badges";
 import { Button, Callout, Card, CardBody } from "@/components/ui/primitives";
@@ -30,6 +31,7 @@ export function KycChecklist({
   slots: ChecklistSlot[];
   locale: string;
 }) {
+  const tu = useTranslations("buyerUi");
   const router = useRouter();
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -92,9 +94,9 @@ export function KycChecklist({
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold text-ink">{slot.title}</span>
                     {slot.required ? (
-                      <span className="text-2xs text-flagged font-medium">*Required</span>
+                      <span className="text-2xs text-flagged font-medium">*{tu("required")}</span>
                     ) : (
-                      <span className="text-2xs text-ink-40">Optional</span>
+                      <span className="text-2xs text-ink-40">{tu("optional")}</span>
                     )}
                     <Badge
                       tone={
@@ -109,7 +111,7 @@ export function KycChecklist({
                                 : "neutral"
                       }
                     >
-                      {status === "MISSING" ? "Missing" : status.toLowerCase().replace(/_/g, " ")}
+                      {status === "MISSING" ? tu("statusMissing") : status.toLowerCase().replace(/_/g, " ")}
                     </Badge>
                   </div>
 
@@ -151,8 +153,8 @@ export function KycChecklist({
                       {uploadingType === slot.type
                         ? "Uploading..."
                         : doc
-                          ? "Replace Document"
-                          : "Upload Document"}
+                          ? tu("replaceDocument")
+                          : tu("uploadDocument")}
                     </span>
                   </label>
 

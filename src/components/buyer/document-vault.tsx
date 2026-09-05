@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badges";
 import { Button, Callout, Card, CardBody, Field, Select } from "@/components/ui/primitives";
@@ -25,6 +26,7 @@ export function DocumentVault({
   initialDocs: VaultDoc[];
   locale: string;
 }) {
+  const tu = useTranslations("buyerUi");
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<string>("PROOF_OF_FUNDS");
   const [file, setFile] = useState<File | null>(null);
@@ -87,7 +89,7 @@ export function DocumentVault({
       <Card>
         <CardBody>
           <form onSubmit={handleUpload} className="flex flex-col gap-4">
-            <h3 className="font-display text-base text-ink">Upload Document to Vault</h3>
+            <h3 className="font-display text-base text-ink">{tu("uploadDocumentToVault")}</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Document Type">
                 <Select
@@ -95,14 +97,14 @@ export function DocumentVault({
                   onChange={(e) => setSelectedType(e.target.value)}
                   disabled={uploading}
                 >
-                  <option value="NATIONAL_ID_FRONT">National ID ? Front</option>
-                  <option value="NATIONAL_ID_BACK">National ID ? Back</option>
-                  <option value="PASSPORT">Passport</option>
-                  <option value="PROOF_OF_ADDRESS">Proof of Address</option>
-                  <option value="PROOF_OF_FUNDS">Proof of Funds</option>
-                  <option value="EMPLOYMENT_PROOF">Employment Proof</option>
-                  <option value="POWER_OF_ATTORNEY">Power of Attorney</option>
-                  <option value="OTHER">Other Evidence</option>
+                  <option value="NATIONAL_ID_FRONT">{tu("nidFront")}</option>
+                  <option value="NATIONAL_ID_BACK">{tu("nidBack")}</option>
+                  <option value="PASSPORT">{tu("passport")}</option>
+                  <option value="PROOF_OF_ADDRESS">{tu("proofOfAddressDoc")}</option>
+                  <option value="PROOF_OF_FUNDS">{tu("proofOfFundsDoc")}</option>
+                  <option value="EMPLOYMENT_PROOF">{tu("employmentProof")}</option>
+                  <option value="POWER_OF_ATTORNEY">{tu("powerOfAttorney")}</option>
+                  <option value="OTHER">{tu("otherEvidence")}</option>
                 </Select>
               </Field>
 
@@ -132,18 +134,16 @@ export function DocumentVault({
       <Card>
         <CardBody className="p-0">
           {initialDocs.length === 0 ? (
-            <div className="p-8 text-center text-sm text-ink-50">
-              No documents uploaded to vault yet.
-            </div>
+            <div className="p-8 text-center text-sm text-ink-50">{tu("vaultEmpty")}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-paper-subtle text-ink-50 rule-b">
                   <tr>
                     <th className="px-4 py-3 font-medium">Type</th>
-                    <th className="px-4 py-3 font-medium">File Name</th>
+                    <th className="px-4 py-3 font-medium">{tu("fileName")}</th>
                     <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Uploaded</th>
+                    <th className="px-4 py-3 font-medium">{tu("uploadedAt")}</th>
                     <th className="px-4 py-3 text-right font-medium">Actions</th>
                   </tr>
                 </thead>

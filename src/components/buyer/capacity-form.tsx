@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Button, Callout, Field, Input } from "@/components/ui/primitives";
 import { updateCapacityAction } from "@/app/actions/buyer";
@@ -13,6 +14,7 @@ export function CapacityForm({
   initialCash: number;
   initialInstallment: number;
 }) {
+  const tu = useTranslations("buyerUi");
   const router = useRouter();
   const [cash, setCash] = useState<string>(initialCash ? initialCash.toString() : "");
   const [installment, setInstallment] = useState<string>(
@@ -57,7 +59,7 @@ export function CapacityForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {error ? <Callout tone="flagged">{error}</Callout> : null}
       {success ? (
-        <Callout tone="verified">Financial capacity updated successfully.</Callout>
+        <Callout tone="verified">{tu("capacityUpdated")}</Callout>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -68,7 +70,7 @@ export function CapacityForm({
             step="10000"
             value={cash}
             onChange={(e) => setCash(e.target.value)}
-            placeholder="e.g. 1500000"
+            placeholder={tu("egCash")}
             required
           />
         </Field>
@@ -80,7 +82,7 @@ export function CapacityForm({
             step="5000"
             value={installment}
             onChange={(e) => setInstallment(e.target.value)}
-            placeholder="e.g. 120000"
+            placeholder={tu("egInstallment")}
             required
           />
         </Field>
@@ -88,8 +90,8 @@ export function CapacityForm({
 
       {numCash > 0 && numInstallment > 0 ? (
         <div className="rounded-sm border border-rule-subtle bg-paper-subtle p-3 text-xs text-ink-70">
-          <span className="font-semibold text-ink">Estimated Purchasing Range: </span>
-          <span>Up to approximately </span>
+          <span className="font-semibold text-ink">{tu("estimatedPurchasingRange")}</span>
+          <span>{tu("upToApproximately")}</span>
           <span className="money font-semibold text-brass">{egp(estimatedPower)}</span>
           <span className="text-ink-40"> (assumes upfront cash + 3 years installments)</span>
         </div>

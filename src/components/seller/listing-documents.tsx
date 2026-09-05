@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badges";
 import { Button, Callout, Card, CardBody, CardHeader, CardTitle, Select } from "@/components/ui/primitives";
@@ -23,6 +24,7 @@ export function ListingDocuments({
   documents: SellerDoc[];
   locale: string;
 }) {
+  const tu = useTranslations("sellerUi");
   const router = useRouter();
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,13 +62,13 @@ export function ListingDocuments({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Listing Documents & Verification Files</CardTitle>
+        <CardTitle>{tu("listingDocsTitle")}</CardTitle>
       </CardHeader>
       <CardBody className="flex flex-col gap-5">
         {error ? <Callout tone="flagged">{error}</Callout> : null}
 
         {documents.length === 0 ? (
-          <p className="text-xs text-ink-50">No documents attached to this listing yet.</p>
+          <p className="text-xs text-ink-50">{tu("noListingDocs")}</p>
         ) : (
           <div className="flex flex-col divide-y divide-rule-subtle">
             {documents.map((doc) => {
@@ -145,7 +147,7 @@ export function ListingDocuments({
 
         {/* Upload additional document */}
         <div className="rule-t pt-4">
-          <span className="eyebrow block mb-2">Upload Additional Document</span>
+          <span className="eyebrow block mb-2">{tu("uploadAdditionalDocument")}</span>
           <div className="flex flex-wrap items-center gap-3">
             <div className="w-48">
               <Select
@@ -153,14 +155,14 @@ export function ListingDocuments({
                 onChange={(e) => setNewType(e.target.value)}
                 disabled={uploadingType !== null}
               >
-                <option value="CONTRACT_ANNEX">Contract Annex</option>
-                <option value="PAYMENT_SCHEDULE_ANNEX">Payment Schedule Annex</option>
-                <option value="PAYMENT_RECEIPT">Payment Receipt</option>
-                <option value="DEVELOPER_ACCOUNT_STATEMENT">Developer Statement</option>
-                <option value="DEVELOPER_NOC">Developer NOC</option>
-                <option value="POWER_OF_ATTORNEY">Power of Attorney</option>
-                <option value="CO_OWNER_CONSENT">Co-Owner Consent</option>
-                <option value="OTHER">Other Document</option>
+                <option value="CONTRACT_ANNEX">{tu("contractAnnex")}</option>
+                <option value="PAYMENT_SCHEDULE_ANNEX">{tu("paymentScheduleAnnex")}</option>
+                <option value="PAYMENT_RECEIPT">{tu("paymentReceipt")}</option>
+                <option value="DEVELOPER_ACCOUNT_STATEMENT">{tu("developerStatement")}</option>
+                <option value="DEVELOPER_NOC">{tu("developerNoc")}</option>
+                <option value="POWER_OF_ATTORNEY">{tu("powerOfAttorney")}</option>
+                <option value="CO_OWNER_CONSENT">{tu("coOwnerConsent")}</option>
+                <option value="OTHER">{tu("otherDocument")}</option>
               </Select>
             </div>
 

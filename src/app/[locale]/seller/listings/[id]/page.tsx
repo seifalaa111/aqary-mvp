@@ -26,6 +26,7 @@ export default async function SellerListingPage({
   const t = await getTranslations({ locale, namespace: "seller" });
   const tm = await getTranslations({ locale, namespace: "market" });
   const tl = await getTranslations({ locale, namespace: "fieldLabel" });
+  const tu = await getTranslations({ locale, namespace: "sellerUi" });
   const isAr = locale === "ar";
 
   const listing = await prisma.listing.findUnique({
@@ -105,12 +106,12 @@ export default async function SellerListingPage({
         <div className="flex flex-wrap gap-2">
           {["LISTED", "UNDER_OFFER"].includes(listing.status) ? (
             <Link href={`/opportunities/${listing.id}`}>
-              <Button variant="secondary">View as a buyer sees it</Button>
+              <Button variant="secondary">{tu("viewAsBuyer")}</Button>
             </Link>
           ) : null}
           {listing.status === "INFO_REQUESTED" ? (
             <Link href={`/seller/listings/${listing.id}/wizard`}>
-              <Button>Supply what is missing</Button>
+              <Button>{tu("supplyWhatIsMissing")}</Button>
             </Link>
           ) : null}
           {listing._count.offers > 0 ? (
@@ -150,7 +151,7 @@ export default async function SellerListingPage({
 
       {listing.status === "REJECTED" ? (
         <div className="mb-8">
-          <Callout tone="flagged" title="We could not verify this file">
+          <Callout tone="flagged" title={tu("couldNotVerifyFile")}>
             {listing.rejectionReason}
           </Callout>
         </div>
@@ -182,7 +183,7 @@ export default async function SellerListingPage({
 
           {/* ---- The record, with provenance ---- */}
           <section>
-            <Eyebrow>Your contract record</Eyebrow>
+            <Eyebrow>{tu("yourContractRecord")}</Eyebrow>
             <h2 className="mb-4 mt-1 font-display text-xl text-ink">
               {isAr ? "ما نعرفه عن عقدك" : "What we hold on your contract"}
             </h2>
@@ -221,7 +222,7 @@ export default async function SellerListingPage({
 
           {/* ---- Documents & Verification Files ---- */}
           <section>
-            <Eyebrow>Listing verification documents</Eyebrow>
+            <Eyebrow>{tu("listingVerificationDocuments")}</Eyebrow>
             <h2 className="mb-4 mt-1 font-display text-xl text-ink">
               {isAr ? "مستندات العقد والتحقق" : "Contract & Verification Files"}
             </h2>
@@ -241,7 +242,7 @@ export default async function SellerListingPage({
 
           {listing.discrepancies.length > 0 ? (
             <section>
-              <Eyebrow>Open questions on your file</Eyebrow>
+              <Eyebrow>{tu("openQuestionsOnFile")}</Eyebrow>
               <div className="mt-3 flex flex-col gap-2">
                 {listing.discrepancies.map((d) => (
                   <Callout key={d.id} tone={d.severity === "CRITICAL" ? "flagged" : "pending"}>
@@ -258,7 +259,7 @@ export default async function SellerListingPage({
 
           {/* ---- Activity ---- */}
           <section>
-            <Eyebrow>Everything that has happened to this file</Eyebrow>
+            <Eyebrow>{tu("fileHistory")}</Eyebrow>
             <ol className="rule-t mt-3">
               {trail.map((e) => (
                 <li key={e.id} className="rule-b flex items-baseline justify-between gap-4 py-2.5">
@@ -277,7 +278,7 @@ export default async function SellerListingPage({
         <div className="flex flex-col gap-5">
           <Card>
             <CardBody>
-              <p className="eyebrow mb-3">Your file at a glance</p>
+              <p className="eyebrow mb-3">{tu("fileAtAGlance")}</p>
               <dl className="rule-t text-sm">
                 <Row label="Documents" value={String(listing._count.documents)} />
                 <Row label="Receipts" value={String(listing.contract.receipts.length)} />
@@ -300,7 +301,7 @@ export default async function SellerListingPage({
           {listing.media.length > 0 ? (
             <Card>
               <CardBody>
-                <p className="eyebrow mb-3">Your images</p>
+                <p className="eyebrow mb-3">{tu("yourImages")}</p>
                 <ul className="grid grid-cols-3 gap-2">
                   {listing.media.map((m) => {
                     const v = m.variants as { thumb?: string };

@@ -42,7 +42,21 @@ interface SourcePoint {
   evidence: Prisma.InputJsonValue;
 }
 
-export async function reconcileListing(listingId: string): Promise<ReconciliationSummary> {
+/**
+ * Compares the five sources for a listing and reports where they disagree.
+ *
+ * `persist` controls whether the comparison also *writes*: it refreshes the
+ * `receiptDerived*` columns and opens or updates `Discrepancy` rows. Those are
+ * real domain mutations, so they belong to the pipeline that owns them —
+ * extraction, an analyst's explicit re-run, a verification decision — and not
+ * to whatever happens to render a page. Use `readReconciliation` from a read
+ * path; see the note on that function.
+ */
+export async function reconcileListing(
+  listingId: string,
+  options: { persist?: boolean } = {},
+): Promise<ReconciliationSummary> {
+  const persist = options.persist ?? true;
   const listing = await prisma.listing.findUniqueOrThrow({
     where: { id: listingId },
     include: {
@@ -91,7 +105,7 @@ export async function reconcileListing(listingId: string): Promise<Reconciliatio
   // Write the receipt-derived source onto the field record. This never touches
   // any other source's columns.
   const paidField = get("AMOUNT_PAID");
-  if (paidField) {
+  if (paidField && persist) {
     await prisma.contractField.update({
       where: { id: paidField.id },
       data: {
@@ -103,7 +117,7 @@ export async function reconcileListing(listingId: string): Promise<Reconciliatio
 
   const outstandingField = get("OUTSTANDING_BALANCE");
   const outstandingFromReceipts = totalPrice ? totalPrice.minus(receiptsPaid) : null;
-  if (outstandingField && outstandingFromReceipts) {
+  if (outstandingField && outstandingFromReceipts && persist) {
     await prisma.contractField.update({
       where: { id: outstandingField.id },
       data: {
@@ -161,7 +175,7 @@ export async function reconcileListing(listingId: string): Promise<Reconciliatio
     });
   }
 
-  await raiseDiscrepancies(listingId, "AMOUNT_PAID", points);
+  if (persist) await raiseDiscrepancies(listingId, "AMOUNT_PAID", points);
 
   // --- Total price: declared vs extracted vs developer -------------------
   const pricePoints: SourcePoint[] = [];
@@ -180,7 +194,7 @@ export async function reconcileListing(listingId: string): Promise<Reconciliatio
   }
   const devTotal = num(get("TOTAL_PRICE")?.developerStatedNum);
   if (devTotal) pricePoints.push({ source: "DEVELOPER_CONFIRMED", value: devTotal, evidence: {} });
-  await raiseDiscrepancies(listingId, "TOTAL_PRICE", pricePoints);
+  if (persist) await raiseDiscrepancies(listingId, "TOTAL_PRICE", pricePoints);
 
   // --- Arithmetic impossibility: paid > total ----------------------------
   if (totalPrice && receiptsPaid.gt(totalPrice)) {
@@ -195,7 +209,7 @@ export async function reconcileListing(listingId: string): Promise<Reconciliatio
   }
 
   // --- Schedule sanity ---------------------------------------------------
-  if (scheduleExpectedPaid && declaredPaid) {
+  if (scheduleExpectedPaid && declaredPaid && persist) {
     await raiseDiscrepancies(listingId, "AMOUNT_PAID", [
       { source: "SELLER_DECLARED", value: declaredPaid, evidence: {} },
       {
@@ -233,6 +247,19 @@ export async function reconcileListing(listingId: string): Promise<Reconciliatio
     openDiscrepancies,
     criticalDiscrepancies,
   };
+}
+
+/**
+ * The same comparison with every write suppressed.
+ *
+ * A page render must never mutate domain state: two analysts opening the same
+ * file would race on discrepancy creation, and a GET would rewrite
+ * `receiptDerived*` columns. Reconciliation is persisted by extraction, by the
+ * analyst's explicit re-run, and on a verification decision — all of which are
+ * deliberate actions with an actor behind them.
+ */
+export async function readReconciliation(listingId: string): Promise<ReconciliationSummary> {
+  return reconcileListing(listingId, { persist: false });
 }
 
 // ---------------------------------------------------------------------------
