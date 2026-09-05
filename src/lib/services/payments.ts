@@ -268,6 +268,106 @@ export async function retryPayment(args: {
   return initiatePayment({ dealId: failed.dealId, kind: failed.kind, actorId: args.actorId, actorRole: args.actorRole, simulate: args.simulate });
 }
 
+export async function reconcilePayment(args: { paymentId: string; actorId: string; actorRole: Role }) {
+  if (args.actorRole !== "ADMIN") {
+    throw new PaymentError("Only admin can reconcile payments", "FORBIDDEN_ROLE");
+  }
+  const payment = await prisma.payment.findUniqueOrThrow({ where: { id: args.paymentId } });
+  if (!payment.providerRef) {
+    throw new PaymentError("Payment has no provider reference", "NO_PROVIDER_REF");
+  }
+  const intent = await provider().getIntent(payment.providerRef);
+  if (!intent) {
+    throw new PaymentError("Provider intent not found", "INTENT_NOT_FOUND");
+  }
+  if (["SUCCEEDED", "FAILED"].includes(intent.status) && ["INITIATED", "PROCESSING"].includes(payment.status)) {
+    const updated = await handlePaymentCallback(payment.id);
+    await audit({
+      actorId: args.actorId,
+      actorRole: args.actorRole,
+      action: "PAYMENT_RECONCILED",
+      entityType: "Payment",
+      entityId: payment.id,
+      before: { status: payment.status },
+      after: { status: updated.status },
+      metadata: { dealId: payment.dealId, providerRef: payment.providerRef },
+    });
+    return updated;
+  }
+  await audit({
+    actorId: args.actorId,
+    actorRole: args.actorRole,
+    action: "PAYMENT_RECONCILED",
+    entityType: "Payment",
+    entityId: payment.id,
+    metadata: { note: `Provider status ${intent.status} matches or payment is already terminal (${payment.status})` },
+  });
+  return payment;
+}
+
+export async function recordPaymentException(args: {
+  paymentId: string;
+  dealId: string;
+  actorId: string;
+  actorRole: Role;
+  reason: string;
+  reference: string;
+}) {
+  if (args.actorRole !== "ADMIN") {
+    throw new PaymentError("Only admin can record payment exceptions", "FORBIDDEN_ROLE");
+  }
+  if (!args.reason || args.reason.trim().length < 10) {
+    throw new PaymentError("A written justification of at least 10 characters is required", "INVALID_REASON");
+  }
+  if (!args.reference || args.reference.trim().length < 4) {
+    throw new PaymentError("An external bank / transaction reference is required", "INVALID_REFERENCE");
+  }
+  const payment = await prisma.payment.findUniqueOrThrow({ where: { id: args.paymentId }, include: { deal: true } });
+  if (payment.dealId !== args.dealId) {
+    throw new PaymentError("Payment does not belong to this deal", "PAYMENT_DEAL_MISMATCH");
+  }
+  if (payment.status === "SUCCEEDED") {
+    throw new PaymentError("Payment has already succeeded", "ALREADY_PAID");
+  }
+
+  const updated = await prisma.payment.update({
+    where: { id: args.paymentId },
+    data: {
+      status: "SUCCEEDED",
+      settledAt: new Date(),
+      providerRef: args.reference.trim(),
+    },
+  });
+
+  await prisma.paymentEvent.create({
+    data: {
+      paymentId: args.paymentId,
+      type: "admin.exception_settled",
+      payload: { reason: args.reason, reference: args.reference, actorId: args.actorId },
+    },
+  });
+
+  await audit({
+    actorId: args.actorId,
+    actorRole: args.actorRole,
+    action: "PAYMENT_EXCEPTION_RECORDED",
+    entityType: "Payment",
+    entityId: args.paymentId,
+    before: { status: payment.status },
+    after: { status: "SUCCEEDED" },
+    metadata: { reason: args.reason, reference: args.reference, dealId: args.dealId },
+  });
+
+  if (payment.milestoneId) {
+    await prisma.milestone.updateMany({
+      where: { id: payment.milestoneId, status: { in: ["PENDING", "BLOCKED", "AT_RISK"] } },
+      data: { status: "IN_PROGRESS", blockedReason: null },
+    });
+  }
+
+  return updated;
+}
+
 registerJob("payment.resolve", async (payload) => {
   const result = await handlePaymentCallback(String(payload.paymentId));
   return { status: result.status };

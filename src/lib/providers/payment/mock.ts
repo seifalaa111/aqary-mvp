@@ -70,4 +70,10 @@ export class MockPaymentProvider implements PaymentProvider {
         }
       : { providerRef, status: "SUCCEEDED", raw: { provider: "mock-psp", recovered: true } };
   }
+
+  async getIntent(providerRef: string): Promise<PaymentCallback | null> {
+    const outcome = this.outcomes.get(providerRef);
+    if (outcome) return outcome;
+    return null;
+  }
 }

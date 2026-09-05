@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { ContractFieldKey, ValueSource } from "@prisma/client";
+import type { ContractFieldKey, Severity, ValueSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireRole, AuthorizationError } from "@/lib/auth/guard";
 import { audit } from "@/lib/audit";
@@ -14,6 +14,8 @@ import {
   rejectListing,
   requestInformation,
   resolveDiscrepancy,
+  flagDiscrepancy,
+  escalateListing,
   reviewReceipt,
   unverifyField,
   verifyField,
@@ -104,6 +106,97 @@ export async function rejectFieldValue(input: {
       return { ok: false, error: "Give a reason of at least 8 characters" };
     }
     await unverifyField({ ...input, analystId: user.id });
+    bump(input.listingId);
+    return { ok: true };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+
+export async function flagDiscrepancyAction(input: {
+  listingId: string;
+  fieldKey: ContractFieldKey;
+  sourceA: ValueSource;
+  valueA?: string;
+  valueAText?: string;
+  sourceB: ValueSource;
+  valueB?: string;
+  valueBText?: string;
+  severity: Severity;
+  titleEn: string;
+  titleAr?: string;
+  notes?: string;
+}): Promise<AnalystResult> {
+  try {
+    const user = await requireRole("ANALYST", "ADMIN");
+    await flagDiscrepancy({
+      listingId: input.listingId,
+      fieldKey: input.fieldKey,
+      analystId: user.id,
+      sourceA: input.sourceA,
+      valueA: input.valueA,
+      valueAText: input.valueAText,
+      sourceB: input.sourceB,
+      valueB: input.valueB,
+      valueBText: input.valueBText,
+      severity: input.severity,
+      titleEn: input.titleEn,
+      titleAr: input.titleAr,
+      notes: input.notes,
+    });
+    bump(input.listingId);
+    return { ok: true };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function escalateListingAction(input: {
+  listingId: string;
+  reason: string;
+  urgency?: "HIGH" | "MEDIUM" | "LOW";
+}): Promise<AnalystResult> {
+  try {
+    const user = await requireRole("ANALYST", "ADMIN");
+    await escalateListing({
+      listingId: input.listingId,
+      analystId: user.id,
+      reason: input.reason,
+      urgency: input.urgency,
+    });
+    bump(input.listingId);
+    return { ok: true };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function reassignListingAction(input: {
+  listingId: string;
+  newAnalystId: string;
+  reason?: string;
+}): Promise<AnalystResult> {
+  try {
+    const user = await requireRole("ANALYST", "ADMIN");
+    const before = await prisma.listing.findUniqueOrThrow({
+      where: { id: input.listingId },
+      select: { assignedAnalystId: true },
+    });
+    await prisma.listing.update({
+      where: { id: input.listingId },
+      data: { assignedAnalystId: input.newAnalystId },
+    });
+    await audit({
+      actorId: user.id,
+      actorRole: user.activeRole,
+      action: "LISTING_STATUS_CHANGED",
+      entityType: "Listing",
+      entityId: input.listingId,
+      before: { assignedAnalystId: before.assignedAnalystId },
+      after: { assignedAnalystId: input.newAnalystId },
+      metadata: { reason: input.reason ?? "Reassigned by operational staff" },
+    });
     bump(input.listingId);
     return { ok: true };
   } catch (err) {

@@ -19,6 +19,8 @@ import {
   requestInfoAction,
   rerunAnalysis,
   resolveDiscrepancyAction,
+  flagDiscrepancyAction,
+  escalateListingAction,
   reviewReceiptAction,
 } from "@/app/actions/analyst";
 import { ReconciliationPanel } from "./reconciliation-panel";
@@ -110,6 +112,15 @@ export function ReviewWorkspace(props: WorkspaceProps) {
   const [overrideValue, setOverrideValue] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
   const [pending, startTransition] = useTransition();
+  const [escalating, setEscalating] = useState(false);
+  const [escalateReason, setEscalateReason] = useState("");
+  const [escalateUrgency, setEscalateUrgency] = useState<"HIGH" | "MEDIUM" | "LOW">("HIGH");
+  const [flaggingField, setFlaggingField] = useState<string | null>(null);
+  const [flagSeverity, setFlagSeverity] = useState<"CRITICAL" | "MAJOR" | "MINOR" | "INFO">("MAJOR");
+  const [flagTitle, setFlagTitle] = useState("");
+  const [flagSourceA, setFlagSourceA] = useState("SELLER_DECLARED");
+  const [flagSourceB, setFlagSourceB] = useState("AI_EXTRACTED");
+  const [flagNotes, setFlagNotes] = useState("");
   const listRef = useRef<HTMLUListElement>(null);
 
   // Time on file, so the 25-minute target is measurable rather than aspirational.
@@ -280,7 +291,15 @@ export function ReviewWorkspace(props: WorkspaceProps) {
             >
               {requiredDone}/{requiredTotal}
             </p>
-          </div>
+          </div>          <Button
+            size="sm"
+            variant="ghost"
+            className="text-flagged hover:text-flagged hover:bg-flagged-soft/20"
+            onClick={() => setEscalating(true)}
+          >
+            Escalate file
+          </Button>
+
           <Button
             size="sm"
             variant="ghost"
@@ -500,7 +519,23 @@ export function ReviewWorkspace(props: WorkspaceProps) {
                                 >
                                   {src.split("_")[0]!.toLowerCase()}
                                 </Button>
-                              ))}
+                              ))}                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOverriding(null);
+                                setFlaggingField(f.key);
+                                setFlagSeverity("MAJOR");
+                                setFlagTitle("Discrepancy in " + f.key);
+                                setFlagSourceA("SELLER_DECLARED");
+                                setFlagSourceB("AI_EXTRACTED");
+                                setFlagNotes("");
+                              }}
+                            >
+                              Flag discrepancy
+                            </Button>
+
                             <Button
                               size="sm"
                               variant="ghost"
@@ -515,6 +550,90 @@ export function ReviewWorkspace(props: WorkspaceProps) {
                             </Button>
                           </div>
                         )}
+                        {flaggingField === f.key ? (
+                          <div className="mt-3 flex flex-col gap-2 rounded-sm bg-paper-sunken p-3" onClick={(e) => e.stopPropagation()}>
+                            <p className="text-2xs font-medium text-ink-70">Flag discrepancy on {f.key}</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-2xs text-ink-50 block mb-0.5">Source A</label>
+                                <Select value={flagSourceA} onChange={(e) => setFlagSourceA(e.target.value)}>
+                                  <option value="SELLER_DECLARED">Seller Declared</option>
+                                  <option value="AI_EXTRACTED">AI Extracted</option>
+                                  <option value="RECEIPT_VERIFIED">Receipt Verified</option>
+                                  <option value="DEVELOPER_CONFIRMED">Developer Confirmed</option>
+                                </Select>
+                              </div>
+                              <div>
+                                <label className="text-2xs text-ink-50 block mb-0.5">Source B</label>
+                                <Select value={flagSourceB} onChange={(e) => setFlagSourceB(e.target.value)}>
+                                  <option value="SELLER_DECLARED">Seller Declared</option>
+                                  <option value="AI_EXTRACTED">AI Extracted</option>
+                                  <option value="RECEIPT_VERIFIED">Receipt Verified</option>
+                                  <option value="DEVELOPER_CONFIRMED">Developer Confirmed</option>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-2xs text-ink-50 block mb-0.5">Severity</label>
+                                <Select value={flagSeverity} onChange={(e) => setFlagSeverity(e.target.value as never)}>
+                                  <option value="CRITICAL">Critical</option>
+                                  <option value="MAJOR">Major</option>
+                                  <option value="MINOR">Minor</option>
+                                  <option value="INFO">Info</option>
+                                </Select>
+                              </div>
+                              <div>
+                                <label className="text-2xs text-ink-50 block mb-0.5">Title</label>
+                                <Input
+                                  value={flagTitle}
+                                  onChange={(e) => setFlagTitle(e.target.value)}
+                                  placeholder="Summary of mismatch"
+                                />
+                              </div>
+                            </div>
+                            <Textarea
+                              rows={2}
+                              placeholder="Notes and rationale"
+                              value={flagNotes}
+                              onChange={(e) => setFlagNotes(e.target.value)}
+                            />
+                            <div className="flex gap-2 pt-1">
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                loading={pending}
+                                disabled={flagTitle.trim().length < 5}
+                                onClick={() => {
+                                  startTransition(async () => {
+                                    const res = await flagDiscrepancyAction({
+                                      listingId: listing.id,
+                                      fieldKey: f.key as never,
+                                      sourceA: flagSourceA as never,
+                                      valueA: f.declared.num ?? undefined,
+                                      sourceB: flagSourceB as never,
+                                      valueB: f.extracted.num ?? undefined,
+                                      severity: flagSeverity as never,
+                                      titleEn: flagTitle,
+                                      notes: flagNotes,
+                                    });
+                                    if (!res.ok) setError(res.error);
+                                    else {
+                                      setFlaggingField(null);
+                                      router.refresh();
+                                    }
+                                  });
+                                }}
+                              >
+                                Create Discrepancy
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setFlaggingField(null)}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : null}
+
 
                         {overriding === f.key ? (
                           <div className="mt-3 flex flex-col gap-2 rounded-sm bg-paper-sunken p-3">
@@ -717,6 +836,64 @@ export function ReviewWorkspace(props: WorkspaceProps) {
             ) : null}
           </div>
         </section>
+      {escalating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-rule bg-paper-raised p-6 shadow-xl">
+            <h2 className="font-display text-lg text-ink mb-2">Escalate Listing</h2>
+            <p className="text-xs text-ink-50 mb-4">
+              Escalating flags this listing for urgent supervisory or administrative attention.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-ink-70 mb-1">Urgency</label>
+                <Select value={escalateUrgency} onChange={(e) => setEscalateUrgency(e.target.value as never)}>
+                  <option value="HIGH">High (Immediate intervention)</option>
+                  <option value="MEDIUM">Medium (Policy ambiguity)</option>
+                  <option value="LOW">Low (Routine verification question)</option>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-ink-70 mb-1">Reason (min 10 characters)</label>
+                <Textarea
+                  rows={3}
+                  value={escalateReason}
+                  onChange={(e) => setEscalateReason(e.target.value)}
+                  placeholder="Explain why this listing requires supervisor or legal escalation..."
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button size="sm" variant="ghost" onClick={() => setEscalating(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  loading={pending}
+                  disabled={escalateReason.trim().length < 10}
+                  onClick={() => {
+                    startTransition(async () => {
+                      const res = await escalateListingAction({
+                        listingId: listing.id,
+                        reason: escalateReason,
+                        urgency: escalateUrgency,
+                      });
+                      if (!res.ok) setError(res.error);
+                      else {
+                        setEscalating(false);
+                        setEscalateReason("");
+                        router.refresh();
+                      }
+                    });
+                  }}
+                >
+                  Confirm Escalation
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       </div>
     </div>
   );

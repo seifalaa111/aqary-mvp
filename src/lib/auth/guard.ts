@@ -89,8 +89,9 @@ export function homeForRole(role: Role): string {
     case "BUYER":
       return "/opportunities";
     case "ANALYST":
-    case "ADMIN":
       return "/analyst";
+    case "ADMIN":
+      return "/admin";
     case "DEVELOPER_PARTNER":
       return "/partner";
     default:

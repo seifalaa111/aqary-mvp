@@ -124,14 +124,22 @@ describe("INVARIANT: a listing cannot publish without an analyst signature", () 
 });
 
 describe("INVARIANT: minimum approved images and required verified fields", () => {
-  it("every published listing has at least the configured number of approved images", async () => {
+  it("every published listing satisfies the delivery-aware media gate", async () => {
     const published = await prisma.listing.findMany({
       where: { status: { in: ["LISTED", "UNDER_OFFER"] } },
-      include: { media: { where: { moderationStatus: "APPROVED", kind: { in: ["PHOTO", "SHOW_UNIT", "RENDER"] } } } },
+      include: {
+        contract: { select: { unit: { select: { deliveryStatus: true } } } },
+        media: { where: { moderationStatus: "APPROVED" } },
+      },
     });
     expect(published.length).toBeGreaterThan(0);
     for (const l of published) {
-      expect(l.media.length).toBeGreaterThanOrEqual(config.MIN_APPROVED_IMAGES);
+      const delivered = l.contract.unit.deliveryStatus === "DELIVERED";
+      const evidence = delivered
+        ? l.media.filter((m) => m.kind === "PHOTO")
+        : l.media.filter((m) => ["PHOTO", "SHOW_UNIT", "RENDER", "PROGRESS"].includes(m.kind));
+      expect(evidence.length).toBeGreaterThanOrEqual(config.MIN_APPROVED_IMAGES);
+      expect(l.media.some((m) => m.kind === "FLOOR_PLAN")).toBe(true);
     }
   });
 

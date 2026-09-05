@@ -102,6 +102,7 @@ export interface PublishBlocker {
     | "OPEN_CRITICAL_DISCREPANCY"
     | "OPEN_CRITICAL_FRAUD_SIGNAL"
     | "INSUFFICIENT_IMAGES"
+    | "INSUFFICIENT_DELIVERED_PHOTOS"
     | "NO_FLOOR_PLAN"
     | "NO_ASKING_CASH"
     | "ASKING_CASH_ABOVE_VERIFIED_PAID";
@@ -130,7 +131,7 @@ export async function checkPublishReadiness(
       media: true,
       discrepancies: { where: { status: "OPEN" } },
       fraudSignals: { where: { status: { in: ["OPEN", "ESCALATED"] } } },
-      contract: { include: { fields: true } },
+      contract: { include: { fields: true, unit: { select: { deliveryStatus: true } } } },
     },
   });
 
@@ -179,18 +180,30 @@ export async function checkPublishReadiness(
     });
   }
 
-  // Show-unit photography counts: it is a real photograph, labelled for what it
-  // is. Floor plans and master plans do not — they are documents, not a gallery.
-  const approvedImages = listing.media.filter(
-    (m) =>
-      m.moderationStatus === "APPROVED" &&
-      (m.kind === "PHOTO" || m.kind === "SHOW_UNIT" || m.kind === "RENDER" || m.kind === "PROGRESS"),
-  );
-  if (approvedImages.length < config.MIN_APPROVED_IMAGES) {
+  const approved = listing.media.filter((m) => m.moderationStatus === "APPROVED");
+  const delivered = listing.contract.unit.deliveryStatus === "DELIVERED";
+
+  // A delivered unit exists. Only a photograph of it is evidence of its condition;
+  // a render, a show unit and a progress shot are all pictures of something else.
+  const evidence = delivered
+    ? approved.filter((m) => m.kind === "PHOTO")
+    : approved.filter(
+        (m) =>
+          m.kind === "PHOTO" ||
+          m.kind === "SHOW_UNIT" ||
+          m.kind === "RENDER" ||
+          m.kind === "PROGRESS",
+      );
+
+  if (evidence.length < config.MIN_APPROVED_IMAGES) {
     blockers.push({
-      code: "INSUFFICIENT_IMAGES",
-      messageEn: `${approvedImages.length} approved images — ${config.MIN_APPROVED_IMAGES} are required`,
-      messageAr: `${approvedImages.length} صورة معتمدة — المطلوب ${config.MIN_APPROVED_IMAGES}`,
+      code: delivered ? "INSUFFICIENT_DELIVERED_PHOTOS" : "INSUFFICIENT_IMAGES",
+      messageEn: delivered
+        ? `${evidence.length} approved actual photos — ${config.MIN_APPROVED_IMAGES} actual photographs of the delivered unit are required (renders/show units are not accepted for delivered units)`
+        : `${evidence.length} approved images — ${config.MIN_APPROVED_IMAGES} are required`,
+      messageAr: delivered
+        ? `${evidence.length} صور فعلية معتمدة — المطلوب ${config.MIN_APPROVED_IMAGES} صور حقيقية للوحدة المستلمة (لا تُقبل الرندرات أو وحدات العرض للوحدات المستلمة)`
+        : `${evidence.length} صورة معتمدة — المطلوب ${config.MIN_APPROVED_IMAGES}`,
     });
   }
 
@@ -225,7 +238,7 @@ export async function checkPublishReadiness(
     }
   }
 
-  return { ready: blockers.length === 0, blockers, approvedImageCount: approvedImages.length };
+  return { ready: blockers.length === 0, blockers, approvedImageCount: evidence.length };
 }
 
 /**

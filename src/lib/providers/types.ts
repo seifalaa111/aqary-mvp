@@ -146,6 +146,8 @@ export interface PaymentProvider {
   createIntent(req: PaymentIntentRequest): Promise<PaymentIntentResult>;
   /** Simulates the PSP's webhook. The application handles the state change. */
   resolveIntent(providerRef: string): Promise<PaymentCallback>;
+  /** Reads current PSP intent status without mutating state. */
+  getIntent(providerRef: string): Promise<PaymentCallback | null>;
 }
 
 // ---------------------------------------------------------------------------

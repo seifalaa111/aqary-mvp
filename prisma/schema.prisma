@@ -98,6 +98,20 @@ enum FeeType {
   FIXED
 }
 
+enum PolicySource {
+  OFFICIAL_LETTER
+  DEVELOPER_PORTAL
+  CONTRACT_ANNEX
+  ANALYST_RESEARCH
+  SYNTHETIC_BENCHMARK
+}
+
+enum PolicyVerificationState {
+  VERIFIED
+  PENDING_CONFIRMATION
+  SYNTHETIC
+}
+
 /// Every material contract value tracked with full provenance.
 enum ContractFieldKey {
   TOTAL_PRICE
@@ -555,6 +569,7 @@ model Developer {
   policy         DeveloperAssignmentPolicy?
   partnerMembers DeveloperPartnerMembership[]
   deals          Deal[]
+  policyVersions DeveloperPolicyVersion[]
 }
 
 /// A developer-partner login belongs to one or more developer organisations.
@@ -575,16 +590,16 @@ model DeveloperPartnerMembership {
 }
 
 model DeveloperAssignmentPolicy {
-  id                String               @id @default(cuid())
-  developerId       String               @unique
-  assignmentAllowed AssignmentPermission @default(CONDITIONAL)
-  feeType           FeeType              @default(PERCENT)
+  id                String                   @id @default(cuid())
+  developerId       String                   @unique
+  assignmentAllowed AssignmentPermission     @default(CONDITIONAL)
+  feeType           FeeType                  @default(PERCENT)
   feePercentBps     Int?
-  feeFixedAmount    Decimal?             @db.Decimal(18, 2)
-  feeBasis          String               @default("TOTAL_CONTRACT_PRICE")
+  feeFixedAmount    Decimal?                 @db.Decimal(18, 2)
+  feeBasis          String                   @default("TOTAL_CONTRACT_PRICE")
   minPercentPaidBps Int?
   minMonthsElapsed  Int?
-  requiredDocuments String[]             @default([])
+  requiredDocuments String[]                 @default([])
   typicalNocDays    Int?
   waitingPeriodDays Int?
   conditionsEn      String?
@@ -592,9 +607,43 @@ model DeveloperAssignmentPolicy {
   contactName       String?
   contactEmail      String?
   contactPhone      String?
-  isSynthetic       Boolean              @default(true)
-  updatedAt         DateTime             @updatedAt
-  developer         Developer            @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  isSynthetic       Boolean                  @default(true)
+  effectiveDate     DateTime?
+  source            PolicySource?
+  verificationState PolicyVerificationState?
+  updatedById       String?
+  updatedAt         DateTime                 @updatedAt
+  developer         Developer                @relation(fields: [developerId], references: [id], onDelete: Cascade)
+}
+
+model DeveloperPolicyVersion {
+  id                String                   @id @default(cuid())
+  developerId       String
+  policyId          String
+  version           Int
+  assignmentAllowed AssignmentPermission
+  feeType           FeeType
+  feePercentBps     Int?
+  feeFixedAmount    Decimal?                 @db.Decimal(18, 2)
+  feeBasis          String
+  minPercentPaidBps Int?
+  minMonthsElapsed  Int?
+  requiredDocuments String[]                 @default([])
+  typicalNocDays    Int?
+  waitingPeriodDays Int?
+  conditionsEn      String?
+  conditionsAr      String?
+  effectiveDate     DateTime?
+  source            PolicySource?
+  verificationState PolicyVerificationState?
+  changeReason      String?
+  createdById       String?
+  createdAt         DateTime                 @default(now())
+
+  developer Developer @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, version])
+  @@index([developerId, createdAt])
 }
 
 model Project {

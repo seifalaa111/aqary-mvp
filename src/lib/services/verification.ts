@@ -1,5 +1,6 @@
 import "server-only";
-import type { ContractFieldKey, MediaKind, Prisma, ValueSource } from "@prisma/client";
+import { Decimal } from "decimal.js";
+import type { ContractFieldKey, MediaKind, Prisma, Severity, ValueSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { FIELD_KINDS } from "@/lib/domain/fields";
@@ -231,6 +232,106 @@ export async function resolveDiscrepancy(args: {
   await computeVerificationScore(d.listingId);
   return updated;
 }
+
+export async function flagDiscrepancy(args: {
+  listingId: string;
+  fieldKey: ContractFieldKey;
+  analystId: string;
+  sourceA: ValueSource;
+  valueA?: string | null;
+  valueAText?: string | null;
+  sourceB: ValueSource;
+  valueB?: string | null;
+  valueBText?: string | null;
+  severity: Severity;
+  titleEn: string;
+  titleAr?: string | null;
+  evidence?: Prisma.InputJsonValue;
+  notes?: string | null;
+}) {
+  if (args.titleEn.trim().length < 5) {
+    throw new VerificationError("A discrepancy title of at least 5 characters is required");
+  }
+  let delta: string | null = null;
+  let deltaPct: number | null = null;
+  if (args.valueA && args.valueB) {
+    try {
+      const a = new Decimal(args.valueA);
+      const b = new Decimal(args.valueB);
+      delta = a.minus(b).abs().toFixed(2);
+      const max = Decimal.max(a.abs(), b.abs());
+      if (!max.isZero()) {
+        deltaPct = a.minus(b).abs().dividedBy(max).times(100).toNumber();
+      }
+    } catch {
+      // Non-numeric delta
+    }
+  }
+
+  const discrepancy = await prisma.discrepancy.create({
+    data: {
+      listingId: args.listingId,
+      fieldKey: args.fieldKey,
+      sourceA: args.sourceA,
+      valueA: args.valueA ? new Decimal(args.valueA) : null,
+      valueAText: args.valueAText ?? null,
+      sourceB: args.sourceB,
+      valueB: args.valueB ? new Decimal(args.valueB) : null,
+      valueBText: args.valueBText ?? null,
+      delta: delta ? new Decimal(delta) : null,
+      deltaPct,
+      severity: args.severity,
+      status: "OPEN",
+      titleEn: args.titleEn.trim(),
+      titleAr: args.titleAr?.trim() ?? null,
+      evidence: args.evidence ?? { notes: args.notes, flaggedBy: args.analystId },
+    },
+  });
+
+  await audit({
+    actorId: args.analystId,
+    actorRole: "ANALYST",
+    action: "DISCREPANCY_FLAGGED",
+    entityType: "Discrepancy",
+    entityId: discrepancy.id,
+    after: {
+      fieldKey: args.fieldKey,
+      severity: args.severity,
+      titleEn: args.titleEn,
+      sourceA: args.sourceA,
+      sourceB: args.sourceB,
+    },
+    metadata: { listingId: args.listingId, notes: args.notes },
+  });
+
+  await computeVerificationScore(args.listingId);
+  return discrepancy;
+}
+
+export async function escalateListing(args: {
+  listingId: string;
+  analystId: string;
+  reason: string;
+  urgency?: "HIGH" | "MEDIUM" | "LOW";
+}) {
+  if (args.reason.trim().length < 10) {
+    throw new VerificationError("An escalation reason of at least 10 characters is required");
+  }
+  const listing = await prisma.listing.findUniqueOrThrow({ where: { id: args.listingId } });
+
+  await audit({
+    actorId: args.analystId,
+    actorRole: "ANALYST",
+    action: "LISTING_ESCALATED",
+    entityType: "Listing",
+    entityId: args.listingId,
+    before: { status: listing.status, assignedAnalystId: listing.assignedAnalystId },
+    metadata: { reason: args.reason.trim(), urgency: args.urgency ?? "HIGH" },
+  });
+
+  return listing;
+}
+
 
 export async function dispositionFraudSignal(args: {
   signalId: string;

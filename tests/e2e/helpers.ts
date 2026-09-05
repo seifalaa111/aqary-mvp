@@ -11,14 +11,14 @@ export async function signIn(page: Page, identifier: string) {
   await page.locator("#identifier").fill(identifier);
   await page.locator("#password").fill(DEMO_PASSWORD);
   await page.getByRole("button", { name: /continue/i }).click();
-  await page.waitForURL(/\/(seller|opportunities|analyst|partner|buyer)/, { timeout: 60_000 });
+  await page.waitForURL(/\/(seller|opportunities|analyst|admin|partner|buyer)/, { timeout: 60_000 });
 }
 
 export async function signOut(page: Page) {
   await page.context().clearCookies();
 }
 
-export async function demoUser(role: "SELLER" | "BUYER" | "ANALYST") {
+export async function demoUser(role: "SELLER" | "BUYER" | "ANALYST" | "ADMIN") {
   const user = await db.user.findFirst({
     where: {
       isDemo: true,

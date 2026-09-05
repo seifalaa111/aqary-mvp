@@ -1,6 +1,7 @@
 import "server-only";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { audit } from "@/lib/audit";
 
 /**
  * Persisted job queue with an in-process runner: retry, exponential backoff,
@@ -136,6 +137,65 @@ export async function runJobNow(jobId: string): Promise<void> {
         runAt: new Date(Date.now() + 2000),
       },
     });
-    throw err;
   }
+}
+
+export class JobError extends Error {
+  constructor(message: string, readonly code: string) {
+    super(message);
+    this.name = "JobError";
+  }
+}
+
+export function sanitizeJobPayload(data: unknown): unknown {
+  if (data === null || data === undefined) return data;
+  if (typeof data === "string" || typeof data === "number" || typeof data === "boolean") return data;
+  if (Array.isArray(data)) return data.map(sanitizeJobPayload);
+  if (typeof data === "object") {
+    const sensitive = /password|token|secret|authorization|creditcard|nationalid|cvv/i;
+    const sanitized: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
+      if (sensitive.test(k)) {
+        sanitized[k] = "[REDACTED]";
+      } else {
+        sanitized[k] = sanitizeJobPayload(v);
+      }
+    }
+    return sanitized;
+  }
+  return data;
+}
+
+export async function retryJob(args: { jobId: string; actorId: string; actorRole: Role }) {
+  if (args.actorRole !== "ADMIN") {
+    throw new JobError("Only admin can retry background jobs", "FORBIDDEN_ROLE");
+  }
+  const job = await prisma.job.findUniqueOrThrow({ where: { id: args.jobId } });
+  if (job.status !== "FAILED" && job.status !== "DEAD") {
+    throw new JobError("Only failed or dead jobs can be retried", "NOT_RETRYABLE");
+  }
+
+  await prisma.job.update({
+    where: { id: args.jobId },
+    data: {
+      status: "QUEUED",
+      runAt: new Date(),
+      lastError: null,
+      attempts: Math.max(0, job.attempts - 1),
+    },
+  });
+
+  await audit({
+    actorId: args.actorId,
+    actorRole: args.actorRole,
+    action: "JOB_RETRIED",
+    entityType: "Job",
+    entityId: job.id,
+    before: { status: job.status, attempts: job.attempts, lastError: job.lastError },
+    after: { status: "QUEUED" },
+    metadata: { jobType: job.type },
+  });
+
+  await runJobNow(args.jobId);
+  return prisma.job.findUniqueOrThrow({ where: { id: args.jobId } });
 }
